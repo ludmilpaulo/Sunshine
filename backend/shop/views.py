@@ -290,11 +290,11 @@ def checkout(request):
                         {"detail": "OPERATION_TYPE_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST
                     )
             except:
-                # Default to SALON if no profile
-                operation_type = Sale.OperationType.SALON
+                # Default to SHOP if no profile
+                operation_type = Sale.OperationType.SHOP
         
         # Validate operation type
-        if operation_type not in [Sale.OperationType.SALON, Sale.OperationType.STUDIO]:
+        if operation_type not in [Sale.OperationType.SHOP, Sale.OperationType.SALON, Sale.OperationType.STUDIO]:
             return Response(
                 {"detail": "INVALID_OPERATION_TYPE"}, status=status.HTTP_400_BAD_REQUEST
             )

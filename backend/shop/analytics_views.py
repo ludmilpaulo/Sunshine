@@ -24,7 +24,7 @@ def apply_operation_type_filter(sales_query, request, operation_type_param=None)
             if profile.operation_type != "BOTH":
                 sales_query = sales_query.filter(operation_type=profile.operation_type)
         except UserProfile.DoesNotExist:
-            # Default to SALON if no profile
+            # Default to SHOP if no profile
             pass
     
     return sales_query

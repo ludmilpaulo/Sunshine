@@ -15,19 +15,19 @@ export default function POSPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
   const [paymentAmount, setPaymentAmount] = useState("");
-  const [userOperationType, setUserOperationType] = useState<"SALON" | "STUDIO" | "BOTH">("SALON");
-  const [selectedOperationType, setSelectedOperationType] = useState<"SALON" | "STUDIO">("SALON");
+  const [userOperationType, setUserOperationType] = useState<"SHOP" | "SALON" | "STUDIO" | "BOTH">("SHOP");
+  const [selectedOperationType, setSelectedOperationType] = useState<"SHOP" | "SALON" | "STUDIO">("SHOP");
 
   useEffect(() => {
     // Get user operation type
     authApi.getMe().then((user) => {
-      const opType = (user as any).operation_type || "SALON";
-      setUserOperationType(opType);
-      // If user has BOTH, default to SALON, otherwise use their type
+      const opType = (user as any).operation_type || "SHOP";
+      setUserOperationType(opType as "SHOP" | "SALON" | "STUDIO" | "BOTH");
+      // If user has BOTH, default to SHOP, otherwise use their type
       if (opType === "BOTH") {
-        setSelectedOperationType("SALON");
+        setSelectedOperationType("SHOP");
       } else {
-        setSelectedOperationType(opType as "SALON" | "STUDIO");
+        setSelectedOperationType(opType as "SHOP" | "SALON" | "STUDIO");
       }
     });
     
@@ -168,9 +168,10 @@ export default function POSPage() {
               <label className="text-xs sm:text-sm font-semibold text-slate-700">Operação:</label>
               <select
                 value={selectedOperationType}
-                onChange={(e) => setSelectedOperationType(e.target.value as "SALON" | "STUDIO")}
+                onChange={(e) => setSelectedOperationType(e.target.value as "SHOP" | "SALON" | "STUDIO")}
                 className="px-3 sm:px-4 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-semibold bg-white"
               >
+                <option value="SHOP">Shop</option>
                 <option value="SALON">Salon</option>
                 <option value="STUDIO">Studio</option>
               </select>

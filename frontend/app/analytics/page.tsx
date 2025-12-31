@@ -12,20 +12,20 @@ export default function AnalyticsPage() {
   const [period, setPeriod] = useState<Period>("month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-  const [operationType, setOperationType] = useState<"SALON" | "STUDIO" | "ALL">("ALL");
+  const [operationType, setOperationType] = useState<"SHOP" | "SALON" | "STUDIO" | "ALL">("ALL");
   const [loading, setLoading] = useState(false);
   const [salesData, setSalesData] = useState<any>(null);
   const [salesDataWithTax, setSalesDataWithTax] = useState<any>(null);
   const [paymentMethodData, setPaymentMethodData] = useState<any>(null);
   const [topSellers, setTopSellers] = useState<any>(null);
-  const [userOperationType, setUserOperationType] = useState<"SALON" | "STUDIO" | "BOTH">("SALON");
+  const [userOperationType, setUserOperationType] = useState<"SHOP" | "SALON" | "STUDIO" | "BOTH">("SHOP");
 
   useEffect(() => {
     authApi.getMe().then((user) => {
-      const opType = (user as any).operation_type || "SALON";
-      setUserOperationType(opType);
+      const opType = (user as any).operation_type || "SHOP";
+      setUserOperationType(opType as "SHOP" | "SALON" | "STUDIO" | "BOTH");
       if (opType !== "BOTH") {
-        setOperationType(opType as "SALON" | "STUDIO");
+        setOperationType(opType as "SHOP" | "SALON" | "STUDIO");
       }
     });
   }, []);
@@ -125,10 +125,11 @@ export default function AnalyticsPage() {
                 <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Operação</label>
                 <select
                   value={operationType}
-                  onChange={(e) => setOperationType(e.target.value as "SALON" | "STUDIO" | "ALL")}
+                  onChange={(e) => setOperationType(e.target.value as "SHOP" | "SALON" | "STUDIO" | "ALL")}
                   className="input-field font-semibold"
                 >
                   <option value="ALL">Todas</option>
+                  <option value="SHOP">Shop</option>
                   <option value="SALON">Salon</option>
                   <option value="STUDIO">Studio</option>
                 </select>

@@ -23,14 +23,14 @@ def me(request):
         role = "staff"
     
     # Get operation type from profile
-    operation_type = "SALON"  # Default
+    operation_type = "SHOP"  # Default
     try:
         profile = user.profile
         operation_type = profile.operation_type
     except UserProfile.DoesNotExist:
         # Create default profile for existing users
-        UserProfile.objects.create(user=user, operation_type="SALON")
-        operation_type = "SALON"
+        UserProfile.objects.create(user=user, operation_type="SHOP")
+        operation_type = "SHOP"
     
     return Response({
         "id": user.id,

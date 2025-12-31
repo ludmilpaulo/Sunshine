@@ -48,14 +48,14 @@ class UserSerializer(serializers.ModelSerializer):
             profile = obj.profile
             return profile.operation_type
         except UserProfile.DoesNotExist:
-            # Default to SALON for existing users without profile
-            return "SALON"
+            # Default to SHOP for existing users without profile
+            return "SHOP"
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating users, including operation_type"""
     operation_type = serializers.ChoiceField(
-        choices=["SALON", "STUDIO", "BOTH"],
+        choices=["SHOP", "SALON", "STUDIO", "BOTH"],
         required=False,
         write_only=True
     )
@@ -92,10 +92,10 @@ class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, min_length=8)
     role = serializers.ChoiceField(choices=["admin", "manager", "staff"], write_only=True, required=True)
     operation_type = serializers.ChoiceField(
-        choices=["SALON", "STUDIO", "BOTH"],
+        choices=["SHOP", "SALON", "STUDIO", "BOTH"],
         write_only=True,
         required=True,
-        help_text="SALON for salon users, STUDIO for studio users, BOTH for admin"
+        help_text="SHOP for shop users, SALON for salon users, STUDIO for studio users, BOTH for admin"
     )
 
     class Meta:

@@ -21,7 +21,7 @@ export default function StaffPage() {
     last_name: "",
     password: "",
     role: "staff" as "admin" | "manager" | "staff",
-    operation_type: "SALON" as "SALON" | "STUDIO" | "BOTH",
+    operation_type: "SHOP" as "SHOP" | "SALON" | "STUDIO" | "BOTH",
     is_active: true,
   });
 
@@ -66,7 +66,7 @@ export default function StaffPage() {
         last_name: "",
         password: "",
         role: "staff",
-        operation_type: "SALON",
+        operation_type: "SHOP",
         is_active: true,
       });
       loadUsers();
@@ -117,7 +117,7 @@ export default function StaffPage() {
                 last_name: "",
                 password: "",
                 role: "staff",
-                operation_type: "SALON",
+                operation_type: "SHOP",
                 is_active: true,
               });
               setShowAddModal(true);
@@ -204,7 +204,7 @@ export default function StaffPage() {
                       </td>
                       <td className="py-5 px-6">
                         <span className="badge-purple">
-                          {(user as any).operation_type === "SALON" ? "Salon" : (user as any).operation_type === "STUDIO" ? "Studio" : "Ambos"}
+                          {(user as any).operation_type === "SHOP" ? "Shop" : (user as any).operation_type === "SALON" ? "Salon" : (user as any).operation_type === "STUDIO" ? "Studio" : "Todos"}
                         </span>
                       </td>
                       <td className="py-5 px-6">
@@ -226,7 +226,7 @@ export default function StaffPage() {
                                 last_name: user.last_name,
                                 password: "",
                                 role: user.role,
-                                operation_type: (user as any).operation_type || "SALON",
+                                operation_type: (user as any).operation_type || "SHOP",
                                 is_active: user.is_active,
                               });
                               setShowAddModal(true);
@@ -341,18 +341,19 @@ export default function StaffPage() {
                 <select
                   value={formData.operation_type}
                   onChange={(e) =>
-                    setFormData({ ...formData, operation_type: e.target.value as "SALON" | "STUDIO" | "BOTH" })
+                    setFormData({ ...formData, operation_type: e.target.value as "SHOP" | "SALON" | "STUDIO" | "BOTH" })
                   }
                   className="input-field font-semibold"
                   required
                   disabled={formData.role === "admin"}
                 >
+                  <option value="SHOP">Shop</option>
                   <option value="SALON">Salon</option>
                   <option value="STUDIO">Studio</option>
-                  <option value="BOTH">Ambos (Admin)</option>
+                  <option value="BOTH">Todos (Admin)</option>
                 </select>
                 {formData.role === "admin" && (
-                  <p className="text-xs text-slate-500 mt-2 font-medium">Administradores têm acesso a ambas as operações</p>
+                  <p className="text-xs text-slate-500 mt-2 font-medium">Administradores têm acesso a todas as operações</p>
                 )}
               </div>
               <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">

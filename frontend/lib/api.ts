@@ -118,6 +118,7 @@ export interface User {
   is_superuser: boolean;
   is_active: boolean;
   role: "admin" | "manager" | "staff";
+  operation_type: "SHOP" | "SALON" | "STUDIO" | "BOTH";
   date_joined: string;
   last_login?: string;
 }
@@ -211,7 +212,7 @@ export const productsApi = {
 
 // Sales
 export const salesApi = {
-  checkout: async (items: CheckoutItem[], payments: CheckoutPayment[], operationType?: "SALON" | "STUDIO"): Promise<CheckoutResponse> => {
+  checkout: async (items: CheckoutItem[], payments: CheckoutPayment[], operationType?: "SHOP" | "SALON" | "STUDIO"): Promise<CheckoutResponse> => {
     const response = await api.post("/sales/checkout/", { items, payments, operation_type: operationType });
     return response.data;
   },
@@ -323,14 +324,14 @@ export const usersApi = {
     const response = await api.get(`/users/${id}/`);
     return response.data;
   },
-  create: async (data: Partial<User> & { password: string; role: "admin" | "manager" | "staff"; operation_type?: "SALON" | "STUDIO" | "BOTH" }) => {
-    const response = await api.post("/users/", data);
-    return response.data;
-  },
-  update: async (id: number, data: Partial<User> & { password?: string; operation_type?: "SALON" | "STUDIO" | "BOTH" }) => {
-    const response = await api.patch(`/users/${id}/`, data);
-    return response.data;
-  },
+    create: async (data: Partial<User> & { password: string; role: "admin" | "manager" | "staff"; operation_type?: "SHOP" | "SALON" | "STUDIO" | "BOTH" }) => {
+      const response = await api.post("/users/", data);
+      return response.data;
+    },
+    update: async (id: number, data: Partial<User> & { password?: string; operation_type?: "SHOP" | "SALON" | "STUDIO" | "BOTH" }) => {
+      const response = await api.patch(`/users/${id}/`, data);
+      return response.data;
+    },
   delete: async (id: number) => {
     await api.delete(`/users/${id}/`);
   },
@@ -438,7 +439,7 @@ export const analyticsApi = {
     date_from?: string;
     date_to?: string;
     user_id?: number;
-    operation_type?: "SALON" | "STUDIO";
+    operation_type?: "SHOP" | "SALON" | "STUDIO";
   }): Promise<SalesByUserResponse> => {
     const queryParams = new URLSearchParams();
     if (params?.period) queryParams.append("period", params.period);
@@ -454,7 +455,7 @@ export const analyticsApi = {
     date_from?: string;
     date_to?: string;
     user_id?: number;
-    operation_type?: "SALON" | "STUDIO";
+    operation_type?: "SHOP" | "SALON" | "STUDIO";
   }): Promise<SalesByUserWithTaxResponse> => {
     const queryParams = new URLSearchParams();
     if (params?.period) queryParams.append("period", params.period);
@@ -469,7 +470,7 @@ export const analyticsApi = {
     period?: "day" | "week" | "month";
     date_from?: string;
     date_to?: string;
-    operation_type?: "SALON" | "STUDIO";
+    operation_type?: "SHOP" | "SALON" | "STUDIO";
   }): Promise<SalesByPaymentMethodResponse> => {
     const queryParams = new URLSearchParams();
     if (params?.period) queryParams.append("period", params.period);

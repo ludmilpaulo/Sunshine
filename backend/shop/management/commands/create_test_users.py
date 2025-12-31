@@ -67,10 +67,10 @@ class Command(BaseCommand):
         if created:
             manager_user.set_password(default_password)
             manager_user.save()
-            # Create profile with SALON operation type for manager
+            # Create profile with SHOP operation type for manager
             UserProfile.objects.get_or_create(
                 user=manager_user,
-                defaults={"operation_type": "SALON"}
+                defaults={"operation_type": "SHOP"}
             )
             self.stdout.write(
                 self.style.SUCCESS(f"✓ Created manager user: {manager_user.username} / {default_password}")
@@ -81,9 +81,9 @@ class Command(BaseCommand):
             # Update profile
             UserProfile.objects.get_or_create(
                 user=manager_user,
-                defaults={"operation_type": "SALON"}
+                defaults={"operation_type": "SHOP"}
             )
-            UserProfile.objects.filter(user=manager_user).update(operation_type="SALON")
+            UserProfile.objects.filter(user=manager_user).update(operation_type="SHOP")
             self.stdout.write(
                 self.style.WARNING(f"→ Updated manager user: {manager_user.username} / {default_password}")
             )
@@ -103,10 +103,10 @@ class Command(BaseCommand):
         if created:
             staff_user.set_password(default_password)
             staff_user.save()
-            # Create profile with SALON operation type for staff
+            # Create profile with SHOP operation type for staff
             UserProfile.objects.get_or_create(
                 user=staff_user,
-                defaults={"operation_type": "SALON"}
+                defaults={"operation_type": "SHOP"}
             )
             self.stdout.write(
                 self.style.SUCCESS(f"✓ Created staff user: {staff_user.username} / {default_password}")
@@ -117,9 +117,9 @@ class Command(BaseCommand):
             # Update profile
             UserProfile.objects.get_or_create(
                 user=staff_user,
-                defaults={"operation_type": "SALON"}
+                defaults={"operation_type": "SHOP"}
             )
-            UserProfile.objects.filter(user=staff_user).update(operation_type="SALON")
+            UserProfile.objects.filter(user=staff_user).update(operation_type="SHOP")
             self.stdout.write(
                 self.style.WARNING(f"→ Updated staff user: {staff_user.username} / {default_password}")
             )
