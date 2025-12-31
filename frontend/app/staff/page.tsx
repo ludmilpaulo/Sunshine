@@ -41,6 +41,74 @@ export default function StaffPage() {
     }
   };
 
+  const formatErrorMessage = (error: any): string => {
+    if (!error?.response?.data) {
+      return error?.message || "Falha ao salvar usuário. Tente novamente.";
+    }
+
+    const data = error.response.data;
+    
+    // Check for general error message
+    if (data.detail) {
+      return data.detail;
+    }
+
+    // Check for non_field_errors
+    if (data.non_field_errors && Array.isArray(data.non_field_errors)) {
+      return data.non_field_errors.join(", ");
+    }
+
+    // Format field-specific errors
+    const fieldErrors: string[] = [];
+    
+    if (data.username) {
+      const usernameErrors = Array.isArray(data.username) ? data.username : [data.username];
+      fieldErrors.push(`Usuário: ${usernameErrors.join(", ")}`);
+    }
+    
+    if (data.email) {
+      const emailErrors = Array.isArray(data.email) ? data.email : [data.email];
+      fieldErrors.push(`E-mail: ${emailErrors.join(", ")}`);
+    }
+    
+    if (data.password) {
+      const passwordErrors = Array.isArray(data.password) ? data.password : [data.password];
+      fieldErrors.push(`Senha: ${passwordErrors.join(", ")}`);
+    }
+    
+    if (data.first_name) {
+      const firstNameErrors = Array.isArray(data.first_name) ? data.first_name : [data.first_name];
+      fieldErrors.push(`Nome: ${firstNameErrors.join(", ")}`);
+    }
+    
+    if (data.last_name) {
+      const lastNameErrors = Array.isArray(data.last_name) ? data.last_name : [data.last_name];
+      fieldErrors.push(`Sobrenome: ${lastNameErrors.join(", ")}`);
+    }
+    
+    if (data.role) {
+      const roleErrors = Array.isArray(data.role) ? data.role : [data.role];
+      fieldErrors.push(`Função: ${roleErrors.join(", ")}`);
+    }
+    
+    if (data.operation_type) {
+      const opTypeErrors = Array.isArray(data.operation_type) ? data.operation_type : [data.operation_type];
+      fieldErrors.push(`Operação: ${opTypeErrors.join(", ")}`);
+    }
+
+    // If we have field errors, return them
+    if (fieldErrors.length > 0) {
+      return fieldErrors.join(" | ");
+    }
+
+    // Fallback to any other error format
+    if (typeof data === "string") {
+      return data;
+    }
+
+    return "Falha ao salvar usuário. Verifique os dados e tente novamente.";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -48,14 +116,14 @@ export default function StaffPage() {
         const updateData: any = { ...formData };
         if (!updateData.password) delete updateData.password;
         await usersApi.update(editingUser.id, updateData);
-        toast.success("Usuário atualizado");
+        toast.success("Usuário atualizado com sucesso!");
       } else {
         if (!formData.password) {
           toast.error("Senha é obrigatória para novos usuários");
           return;
         }
         await usersApi.create(formData);
-        toast.success("Usuário criado");
+        toast.success("Usuário criado com sucesso!");
       }
       setShowAddModal(false);
       setEditingUser(null);
@@ -71,7 +139,20 @@ export default function StaffPage() {
       });
       loadUsers();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "Falha ao salvar usuário");
+      const errorMessage = formatErrorMessage(error);
+      toast.error(errorMessage, {
+        duration: 6000,
+        style: {
+          background: '#ef4444',
+          color: '#fff',
+          padding: '16px',
+          borderRadius: '8px',
+          fontSize: '14px',
+          fontWeight: '500',
+          maxWidth: '500px',
+        },
+      });
+      console.error("Error creating/updating user:", error);
     }
   };
 

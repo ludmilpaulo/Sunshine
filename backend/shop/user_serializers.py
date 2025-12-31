@@ -89,13 +89,48 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=True, min_length=8)
-    role = serializers.ChoiceField(choices=["admin", "manager", "staff"], write_only=True, required=True)
+    password = serializers.CharField(
+        write_only=True, 
+        required=True, 
+        min_length=8,
+        error_messages={
+            "required": "A senha é obrigatória",
+            "min_length": "A senha deve ter pelo menos 8 caracteres",
+        }
+    )
+    role = serializers.ChoiceField(
+        choices=["admin", "manager", "staff"], 
+        write_only=True, 
+        required=True,
+        error_messages={
+            "required": "A função é obrigatória",
+            "invalid_choice": "Função inválida. Escolha entre: admin, manager ou staff",
+        }
+    )
     operation_type = serializers.ChoiceField(
         choices=["SHOP", "SALON", "STUDIO", "BOTH"],
         write_only=True,
         required=True,
+        error_messages={
+            "required": "O tipo de operação é obrigatório",
+            "invalid_choice": "Tipo de operação inválido. Escolha entre: SHOP, SALON, STUDIO ou BOTH",
+        },
         help_text="SHOP for shop users, SALON for salon users, STUDIO for studio users, BOTH for admin"
+    )
+    username = serializers.CharField(
+        required=True,
+        error_messages={
+            "required": "O nome de usuário é obrigatório",
+            "blank": "O nome de usuário não pode estar vazio",
+        }
+    )
+    email = serializers.EmailField(
+        required=True,
+        error_messages={
+            "required": "O e-mail é obrigatório",
+            "invalid": "E-mail inválido. Verifique o formato do e-mail",
+            "blank": "O e-mail não pode estar vazio",
+        }
     )
 
     class Meta:
@@ -110,6 +145,18 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "operation_type",
             "is_active",
         ]
+
+    def validate_username(self, value):
+        """Validate username uniqueness"""
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Este nome de usuário já está em uso. Escolha outro.")
+        return value
+
+    def validate_email(self, value):
+        """Validate email uniqueness"""
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Este e-mail já está em uso. Escolha outro.")
+        return value
 
     def create(self, validated_data):
         role = validated_data.pop("role")
