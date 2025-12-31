@@ -263,15 +263,18 @@ export const stockApi = {
 // Print
 // Helper function to get Print Bridge URL based on environment
 const getPrintBridgeUrl = (): string | null => {
-  // Always use environment variable if set
+  // Always use environment variable if set (this is the correct way for production)
   if (process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL) {
     return process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL;
   }
   
-  // Check if we're in production (Vercel)
+  // Check if we're in production (not localhost)
   const isProduction = typeof window !== "undefined" && 
-    (window.location.hostname.includes("vercel.app") || 
-     window.location.hostname.includes("sunshinebar"));
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1" &&
+    !window.location.hostname.startsWith("192.168.") &&
+    !window.location.hostname.startsWith("10.") &&
+    !window.location.hostname.includes(":3000");
   
   // In production without URL configured, return null (printing will be skipped)
   if (isProduction) {

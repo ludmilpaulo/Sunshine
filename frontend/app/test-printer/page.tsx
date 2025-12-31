@@ -16,10 +16,31 @@ export default function TestPrinterPage() {
     loadPrinters();
   }, []);
 
+  const getPrintBridgeUrl = (): string | null => {
+    if (process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL) {
+      return process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL;
+    }
+    const isProduction = typeof window !== "undefined" && 
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1" &&
+      !window.location.hostname.startsWith("192.168.") &&
+      !window.location.hostname.startsWith("10.") &&
+      !window.location.hostname.includes(":3000");
+    if (isProduction) {
+      return null;
+    }
+    return "http://localhost:3333";
+  };
+
   const loadPrinters = async () => {
     setLoading(true);
     try {
-      const printBridgeUrl = process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL || "http://localhost:3333";
+      const printBridgeUrl = getPrintBridgeUrl();
+      if (!printBridgeUrl) {
+        toast.error("Print Bridge URL não configurado. Configure NEXT_PUBLIC_PRINT_BRIDGE_URL em Vercel.");
+        setLoading(false);
+        return;
+      }
       const response = await fetch(`${printBridgeUrl}/printers`);
       if (response.ok) {
         const data = await response.json();
@@ -88,19 +109,12 @@ export default function TestPrinterPage() {
   const testDiscovery = async () => {
     setLoading(true);
     try {
-      const getPrintBridgeUrl = () => {
-        if (process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL) {
-          return process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL;
-        }
-        const isProduction = typeof window !== "undefined" && 
-          (window.location.hostname.includes("vercel.app") || 
-           window.location.hostname.includes("sunshinebar"));
-        if (isProduction) {
-          return "http://localhost:3333";
-        }
-        return "http://localhost:3333";
-      };
       const printBridgeUrl = getPrintBridgeUrl();
+      if (!printBridgeUrl) {
+        toast.error("Print Bridge URL não configurado. Configure NEXT_PUBLIC_PRINT_BRIDGE_URL em Vercel.");
+        setLoading(false);
+        return;
+      }
       const response = await fetch(`${printBridgeUrl}/discover`);
       if (response.ok) {
         const data = await response.json();
