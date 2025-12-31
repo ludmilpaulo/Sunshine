@@ -59,6 +59,15 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         required=False,
         write_only=True
     )
+    password = serializers.CharField(
+        write_only=True,
+        required=False,
+        min_length=8,
+        allow_blank=True,
+        error_messages={
+            "min_length": "A senha deve ter pelo menos 8 caracteres",
+        }
+    )
 
     class Meta:
         model = User
@@ -67,6 +76,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             "email",
             "first_name",
             "last_name",
+            "password",
             "is_active",
             "operation_type",
         ]
@@ -76,7 +86,14 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         from .models import UserProfile
         
         operation_type = validated_data.pop("operation_type", None)
+        password = validated_data.pop("password", None)
+        
         user = super().update(instance, validated_data)
+        
+        # Update password if provided
+        if password:
+            user.set_password(password)
+            user.save()
         
         # Update operation_type if provided
         if operation_type is not None:

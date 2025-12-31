@@ -47,18 +47,14 @@ class UserViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        password = serializer.validated_data.pop("password", None)
-        user = serializer.save()
-        if password:
-            user.set_password(password)
-            user.save()
+        # The UserCreateSerializer.create() method already handles password and user creation
+        # So we just need to call save() which will call the serializer's create() method
+        serializer.save()
 
     def perform_update(self, serializer):
-        password = serializer.validated_data.pop("password", None)
-        user = serializer.save()
-        if password:
-            user.set_password(password)
-            user.save()
+        # The UserUpdateSerializer.update() method already handles password and operation_type
+        # So we just need to call save() which will call the serializer's update() method
+        serializer.save()
 
 
 @api_view(["GET"])
