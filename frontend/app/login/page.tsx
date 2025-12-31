@@ -31,7 +31,27 @@ export default function LoginPage() {
       }
     } catch (error: any) {
       // Get detailed error message from backend
-      const errorMessage = error.response?.data?.detail || "Erro ao fazer login. Tente novamente.";
+      let errorMessage = "Erro ao fazer login. Tente novamente.";
+      
+      if (error.response) {
+        // Backend returned an error response
+        const data = error.response.data;
+        if (data?.detail) {
+          errorMessage = data.detail;
+        } else if (data?.message) {
+          errorMessage = data.message;
+        } else if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data?.non_field_errors) {
+          errorMessage = Array.isArray(data.non_field_errors) 
+            ? data.non_field_errors[0] 
+            : data.non_field_errors;
+        }
+      } else if (error.message) {
+        // Network error or other error
+        errorMessage = error.message;
+      }
+      
       toast.error(errorMessage, {
         duration: 5000,
         style: {
