@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework import status
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -47,4 +48,49 @@ def me(request):
         "date_joined": user.date_joined.isoformat() if user.date_joined else None,
         "last_login": user.last_login.isoformat() if user.last_login else None,
     })
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """Change user password"""
+    current_password = request.data.get("current_password")
+    new_password = request.data.get("new_password")
+    
+    if not current_password or not new_password:
+        return Response(
+            {"detail": "Senha atual e nova senha são obrigatórias"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    if len(new_password) < 8:
+        return Response(
+            {"detail": "A nova senha deve ter pelo menos 8 caracteres"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    user = request.user
+    
+    # Verify current password
+    if not user.check_password(current_password):
+        return Response(
+            {"detail": "Senha atual incorreta"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Check if new password is different
+    if user.check_password(new_password):
+        return Response(
+            {"detail": "A nova senha deve ser diferente da senha atual"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Set new password
+    user.set_password(new_password)
+    user.save()
+    
+    return Response(
+        {"detail": "Senha alterada com sucesso"},
+        status=status.HTTP_200_OK
+    )
 

@@ -20,9 +20,14 @@ export default function AnalyticsPage() {
   const [topSellers, setTopSellers] = useState<any>(null);
   const [userOperationType, setUserOperationType] = useState<"SHOP" | "SALON" | "STUDIO" | "BOTH">("SHOP");
   const [salesByOperation, setSalesByOperation] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isStaff, setIsStaff] = useState(false);
 
   useEffect(() => {
     authApi.getMe().then((user) => {
+      setCurrentUser(user);
+      const isStaffUser = user.role === "staff";
+      setIsStaff(isStaffUser);
       const opType = (user as any).operation_type || "SHOP";
       setUserOperationType(opType as "SHOP" | "SALON" | "STUDIO" | "BOTH");
       if (opType !== "BOTH") {
@@ -41,15 +46,20 @@ export default function AnalyticsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const params = {
+      const params: any = {
         period,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
         operation_type: operationType !== "ALL" ? operationType : undefined,
       };
       
+      // If staff user, filter by their user_id
+      if (isStaff && currentUser) {
+        params.user_id = currentUser.id;
+      }
+      
       // If admin viewing "ALL", load data for each operation separately
-      if (userOperationType === "BOTH" && operationType === "ALL") {
+      if (userOperationType === "BOTH" && operationType === "ALL" && !isStaff) {
         const [salesResponse, salesWithTaxResponse, paymentMethodResponse, topSellersResponse, shopData, salonData, studioData] = await Promise.all([
           analyticsApi.getSalesByUser(params),
           analyticsApi.getSalesByUserWithTax(params),
@@ -93,7 +103,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     loadData();
-  }, [period, operationType]);
+  }, [period, operationType, isStaff, currentUser]);
 
   const handleFilter = () => {
     loadData();
@@ -259,7 +269,8 @@ export default function AnalyticsPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
-          {/* Sales by User */}
+          {/* Sales by User - Only show for admin/manager, not for staff */}
+          {!isStaff && (
           <div className="card group">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
@@ -321,8 +332,10 @@ export default function AnalyticsPage() {
               </div>
             )}
           </div>
+          )}
 
-          {/* Top Sellers */}
+          {/* Top Sellers - Only show for admin/manager */}
+          {!isStaff && (
           <div className="card">
             <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Award className="w-5 h-5" />
@@ -397,6 +410,7 @@ export default function AnalyticsPage() {
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* Payment Methods and Sales by User with Tax */}
@@ -481,7 +495,8 @@ export default function AnalyticsPage() {
             )}
           </div>
 
-          {/* Sales by User with Tax Breakdown */}
+          {/* Sales by User with Tax Breakdown - Only show for admin/manager */}
+          {!isStaff && (
           <div className="card">
             <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Users className="w-5 h-5" />
@@ -573,6 +588,7 @@ export default function AnalyticsPage() {
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
     </DashboardLayout>

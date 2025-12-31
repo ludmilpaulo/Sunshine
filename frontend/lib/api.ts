@@ -176,6 +176,13 @@ export const authApi = {
     const response = await api.get("/auth/me/");
     return response.data;
   },
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const response = await api.post("/auth/change-password/", {
+      current_password: currentPassword,
+      new_password: newPassword,
+    });
+    return response.data;
+  },
   requestPasswordReset: async (email: string) => {
     const response = await axios.post(`${API_BASE_URL}/auth/password-reset/request/`, {
       email,

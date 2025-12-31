@@ -16,6 +16,7 @@ import {
   Printer,
   Menu,
   X,
+  Lock,
 } from "lucide-react";
 import { authApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
@@ -46,7 +47,7 @@ const menuItems = {
   ],
   staff: [
     { href: "/pos", label: "Ponto de Venda", icon: ShoppingCart },
-    { href: "/products", label: "Produtos", icon: Package },
+    { href: "/analytics", label: "Minhas Vendas", icon: BarChart3 },
   ],
 };
 
@@ -133,6 +134,14 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
             </p>
           </div>
         </div>
+        <Link
+          href="/change-password"
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 mb-3 rounded-xl text-slate-300 hover:bg-blue-600/20 hover:text-blue-300 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300 font-semibold group"
+          onClick={() => setIsMobileOpen(false)}
+        >
+          <Lock className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          <span>Alterar Senha</span>
+        </Link>
         <button
           onClick={handleLogout}
           className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-slate-300 hover:bg-red-600/20 hover:text-red-300 border border-slate-700/50 hover:border-red-500/50 transition-all duration-300 font-semibold group"
