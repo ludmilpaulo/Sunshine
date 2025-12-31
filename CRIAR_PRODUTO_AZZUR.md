@@ -15,7 +15,8 @@ O produto "Azzur Agua de Mesa" com código de barras "74576080578" precisa ser c
    ```
 
 Isso criará o produto "Azzur Agua de Mesa" com:
-- Código de barras: `74576080578`
+- Código de barras principal: `745760805778` (12 dígitos - código correto)
+- Código de barras alternativo: `74576080578` (11 dígitos - caso o scanner leia incorretamente)
 - Nome: "Azzur Agua de Mesa"
 - Preço: 100.00 AOA
 - Custo: 60.00 AOA
@@ -29,7 +30,7 @@ Isso criará o produto "Azzur Agua de Mesa" com:
 4. Clique em **Add Product**
 5. Preencha os campos:
    - **Name**: `Azzur Agua de Mesa`
-   - **Barcode**: `74576080578`
+   - **Barcode**: `745760805778` (12 dígitos - código correto do produto)
    - **SKU**: `AZZUR-001` (opcional)
    - **Price**: `100.00`
    - **Cost**: `60.00`
@@ -47,10 +48,10 @@ Isso criará o produto "Azzur Agua de Mesa" com:
 1. Acesse: `https://sunshinebar.vercel.app/products`
 2. Faça login como admin
 3. Clique em **Adicionar Produto**
-4. Escaneie o código de barras `74576080578` ou digite manualmente
+4. Escaneie o código de barras `745760805778` ou digite manualmente
 5. Preencha os campos:
    - **Nome**: `Azzur Agua de Mesa`
-   - **Código de Barras**: `74576080578`
+   - **Código de Barras**: `745760805778` (12 dígitos)
    - **Preço**: `100.00`
    - **Custo**: `60.00`
    - **Taxa de Imposto**: `0.00`
@@ -59,7 +60,7 @@ Isso criará o produto "Azzur Agua de Mesa" com:
 
 ## Verificação
 
-Após criar o produto, teste escaneando o código `74576080578` no POS:
+Após criar o produto, teste escaneando o código `745760805778` (ou `74576080578` se o scanner ler 11 dígitos) no POS:
 - Acesse: `https://sunshinebar.vercel.app/pos`
 - Escaneie o código de barras
 - O produto deve aparecer no carrinho

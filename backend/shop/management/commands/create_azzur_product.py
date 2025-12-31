@@ -7,15 +7,59 @@ from shop.models import Product, Inventory
 
 
 class Command(BaseCommand):
-    help = "Creates the Azzur Agua de Mesa product with barcode 745760805778"
+    help = "Creates the Azzur Agua de Mesa product with barcode 745760805778 (12 digits) and fallback 74576080578 (11 digits)"
 
     def handle(self, *args, **options):
-        # Try both barcodes - the one mentioned (12 digits) and the one being scanned (11 digits)
-        barcodes_to_try = ["745760805778", "74576080578"]
+        # Primary barcode: 745760805778 (12 digits - the correct one from the product)
+        primary_barcode = "745760805778"
         
-        for barcode in barcodes_to_try:
-            product, created = Product.objects.get_or_create(
-                barcode=barcode,
+        # Create/update product with primary barcode
+        product, created = Product.objects.get_or_create(
+            barcode=primary_barcode,
+            defaults={
+                "name": "Azzur Agua de Mesa",
+                "sku": "AZZUR-001",
+                "price": "100.00",
+                "cost": "60.00",
+                "tax_rate": "0.00",
+                "active": True,
+            },
+        )
+        
+        if created:
+            Inventory.objects.create(product=product, qty_on_hand=100)
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"✓ Created product: {product.name} (Barcode: {product.barcode})"
+                )
+            )
+        else:
+            # Update existing product
+            product.name = "Azzur Agua de Mesa"
+            product.price = "100.00"
+            product.cost = "60.00"
+            product.active = True
+            product.save()
+            
+            inventory, _ = Inventory.objects.get_or_create(
+                product=product, defaults={"qty_on_hand": 100}
+            )
+            if not _:
+                inventory.qty_on_hand = 100
+                inventory.save()
+            
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"✓ Updated product: {product.name} (Barcode: {product.barcode})"
+                )
+            )
+        
+        # Also create a product with the 11-digit barcode (74576080578) if scanner is reading it incorrectly
+        # This ensures the product is found regardless of which code is scanned
+        scanned_barcode_11 = "74576080578"
+        if not Product.objects.filter(barcode=scanned_barcode_11).exists():
+            product_11, created_11 = Product.objects.get_or_create(
+                barcode=scanned_barcode_11,
                 defaults={
                     "name": "Azzur Agua de Mesa",
                     "sku": "AZZUR-001",
@@ -26,54 +70,11 @@ class Command(BaseCommand):
                 },
             )
             
-            if created:
-                Inventory.objects.create(product=product, qty_on_hand=100)
+            if created_11:
+                Inventory.objects.create(product=product_11, qty_on_hand=100)
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"✓ Created product: {product.name} (Barcode: {product.barcode})"
-                    )
-                )
-            else:
-                # Update existing product
-                product.name = "Azzur Agua de Mesa"
-                product.price = "100.00"
-                product.cost = "60.00"
-                product.active = True
-                product.save()
-                
-                inventory, _ = Inventory.objects.get_or_create(
-                    product=product, defaults={"qty_on_hand": 100}
-                )
-                if not _:
-                    inventory.qty_on_hand = 100
-                    inventory.save()
-                
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"✓ Updated product: {product.name} (Barcode: {product.barcode})"
-                    )
-                )
-        
-        # Also create a product with the scanned barcode if it doesn't exist
-        scanned_barcode = "74576080578"
-        if not Product.objects.filter(barcode=scanned_barcode).exists():
-            product, created = Product.objects.get_or_create(
-                barcode=scanned_barcode,
-                defaults={
-                    "name": "Azzur Agua de Mesa",
-                    "sku": "AZZUR-001",
-                    "price": "100.00",
-                    "cost": "60.00",
-                    "tax_rate": "0.00",
-                    "active": True,
-                },
-            )
-            
-            if created:
-                Inventory.objects.create(product=product, qty_on_hand=100)
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"✓ Created product with scanned barcode: {product.name} (Barcode: {product.barcode})"
+                        f"✓ Created product with 11-digit barcode (fallback): {product_11.name} (Barcode: {product_11.barcode})"
                     )
                 )
         
