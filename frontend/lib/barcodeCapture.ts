@@ -129,23 +129,27 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
     // Remove all whitespace
     normalized = normalized.replace(/\s+/g, '');
     
-    // FIRST: Remove consecutive duplicate characters (e.g., "5555" -> "5", "4444" -> "4")
-    // This handles cases where the scanner sends each character multiple times
-    let deduplicated = "";
-    let lastChar = "";
-    for (let i = 0; i < normalized.length; i++) {
-      const char = normalized[i];
-      // Only add if it's different from the last character
-      if (char !== lastChar) {
-        deduplicated += char;
-        lastChar = char;
+    // ONLY remove consecutive duplicates if code is suspiciously long (>20 chars)
+    // This prevents removing valid duplicate digits in normal barcodes (e.g., "745760805778" has "77")
+    if (normalized.length > 20) {
+      // Remove consecutive duplicate characters (e.g., "5555" -> "5", "4444" -> "4")
+      // This handles cases where the scanner sends each character multiple times
+      let deduplicated = "";
+      let lastChar = "";
+      for (let i = 0; i < normalized.length; i++) {
+        const char = normalized[i];
+        // Only add if it's different from the last character
+        if (char !== lastChar) {
+          deduplicated += char;
+          lastChar = char;
+        }
       }
+      
+      if (DEBUG && deduplicated !== normalized) {
+        console.log("[Barcode] 🔄 Removed consecutive duplicates (code too long):", normalized, "->", deduplicated);
+      }
+      normalized = deduplicated;
     }
-    
-    if (DEBUG && deduplicated !== normalized) {
-      console.log("[Barcode] 🔄 Removed consecutive duplicates:", normalized, "->", deduplicated);
-    }
-    normalized = deduplicated;
     
     // If code is too long, try to extract valid barcode (handle duplication)
     if (normalized.length > 20) {
