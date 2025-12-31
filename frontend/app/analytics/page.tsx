@@ -19,6 +19,7 @@ export default function AnalyticsPage() {
   const [paymentMethodData, setPaymentMethodData] = useState<any>(null);
   const [topSellers, setTopSellers] = useState<any>(null);
   const [userOperationType, setUserOperationType] = useState<"SHOP" | "SALON" | "STUDIO" | "BOTH">("SHOP");
+  const [salesByOperation, setSalesByOperation] = useState<any>(null);
 
   useEffect(() => {
     authApi.getMe().then((user) => {
@@ -47,17 +48,41 @@ export default function AnalyticsPage() {
         operation_type: operationType !== "ALL" ? operationType : undefined,
       };
       
-      const [salesResponse, salesWithTaxResponse, paymentMethodResponse, topSellersResponse] = await Promise.all([
-        analyticsApi.getSalesByUser(params),
-        analyticsApi.getSalesByUserWithTax(params),
-        analyticsApi.getSalesByPaymentMethod(params),
-        analyticsApi.getTopSellers({ period, limit: 10 }),
-      ]);
+      // If admin viewing "ALL", load data for each operation separately
+      if (userOperationType === "BOTH" && operationType === "ALL") {
+        const [salesResponse, salesWithTaxResponse, paymentMethodResponse, topSellersResponse, shopData, salonData, studioData] = await Promise.all([
+          analyticsApi.getSalesByUser(params),
+          analyticsApi.getSalesByUserWithTax(params),
+          analyticsApi.getSalesByPaymentMethod(params),
+          analyticsApi.getTopSellers({ period, limit: 10 }),
+          analyticsApi.getSalesByUser({ ...params, operation_type: "SHOP" }),
+          analyticsApi.getSalesByUser({ ...params, operation_type: "SALON" }),
+          analyticsApi.getSalesByUser({ ...params, operation_type: "STUDIO" }),
+        ]);
 
-      setSalesData(salesResponse);
-      setSalesDataWithTax(salesWithTaxResponse);
-      setPaymentMethodData(paymentMethodResponse);
-      setTopSellers(topSellersResponse);
+        setSalesData(salesResponse);
+        setSalesDataWithTax(salesWithTaxResponse);
+        setPaymentMethodData(paymentMethodResponse);
+        setTopSellers(topSellersResponse);
+        setSalesByOperation({
+          SHOP: shopData,
+          SALON: salonData,
+          STUDIO: studioData,
+        });
+      } else {
+        const [salesResponse, salesWithTaxResponse, paymentMethodResponse, topSellersResponse] = await Promise.all([
+          analyticsApi.getSalesByUser(params),
+          analyticsApi.getSalesByUserWithTax(params),
+          analyticsApi.getSalesByPaymentMethod(params),
+          analyticsApi.getTopSellers({ period, limit: 10 }),
+        ]);
+
+        setSalesData(salesResponse);
+        setSalesDataWithTax(salesWithTaxResponse);
+        setPaymentMethodData(paymentMethodResponse);
+        setTopSellers(topSellersResponse);
+        setSalesByOperation(null);
+      }
     } catch (error: any) {
       toast.error("Erro ao carregar dados de analytics");
       console.error(error);
