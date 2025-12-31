@@ -1,4 +1,5 @@
 from rest_framework import serializers
+import re
 from .models import Product, Inventory, Sale, SaleItem, Payment, StockMove
 
 
