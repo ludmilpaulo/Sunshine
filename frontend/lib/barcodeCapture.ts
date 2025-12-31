@@ -16,6 +16,8 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   let isScanning = false;
   let lastScannedCode = "";
   let lastScannedTime = 0;
+  let lastKeyProcessed = ""; // Track last key processed to prevent duplicate events
+  let lastKeyTime = 0; // Track time of last key to prevent duplicate events
   const TIMEOUT_MS = options?.timeout || 300; // Increased timeout for slower scanners
   const MIN_LENGTH = options?.minLength || 3;
   const MAX_LENGTH = 50; // Maximum reasonable barcode length
@@ -24,6 +26,7 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   const STRIP_SUFFIX = options?.stripSuffix ?? true;
   const DUPLICATE_THRESHOLD = 2000; // Ignore same code if scanned within 2 seconds
   const SCANNER_SPEED_THRESHOLD = 100; // Max time between keys for scanner (ms)
+  const DUPLICATE_KEY_THRESHOLD = 10; // Ignore duplicate key events within 10ms (keydown + keypress)
 
   // Common scanner prefixes/suffixes to strip
   const PREFIXES = ["STX", "\x02", "GS", "\x1D"];
@@ -126,6 +129,24 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
     // Remove all whitespace
     normalized = normalized.replace(/\s+/g, '');
     
+    // FIRST: Remove consecutive duplicate characters (e.g., "5555" -> "5", "4444" -> "4")
+    // This handles cases where the scanner sends each character multiple times
+    let deduplicated = "";
+    let lastChar = "";
+    for (let i = 0; i < normalized.length; i++) {
+      const char = normalized[i];
+      // Only add if it's different from the last character
+      if (char !== lastChar) {
+        deduplicated += char;
+        lastChar = char;
+      }
+    }
+    
+    if (DEBUG && deduplicated !== normalized) {
+      console.log("[Barcode] 🔄 Removed consecutive duplicates:", normalized, "->", deduplicated);
+    }
+    normalized = deduplicated;
+    
     // If code is too long, try to extract valid barcode (handle duplication)
     if (normalized.length > 20) {
       // Try to find repeating pattern
@@ -217,6 +238,8 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
     isScanning = false;
     lastScannedCode = normalizedCode;
     lastScannedTime = Date.now();
+    lastKeyProcessed = ""; // Reset after processing
+    lastKeyTime = 0; // Reset after processing
     
     if (DEBUG) {
       console.log("[Barcode] ✅ Valid barcode received:", normalizedCode, "Length:", normalizedCode.length, "Original:", code);
@@ -375,7 +398,19 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
       // Some scanners send special characters, we'll filter them but be more permissive
       // Most barcodes are numeric, but some may contain letters
       if (/^[0-9a-zA-Z\-_\.]$/.test(e.key)) {
+        // Prevent duplicate key events (keydown + keypress both fire)
+        const timeSinceLastKeyEvent = now - lastKeyTime;
+        if (e.key === lastKeyProcessed && timeSinceLastKeyEvent < DUPLICATE_KEY_THRESHOLD) {
+          if (DEBUG) {
+            console.log("[Barcode] ⏭️ Skipping duplicate key event:", e.key, "Time since last:", timeSinceLastKeyEvent);
+          }
+          return; // Skip this duplicate event
+        }
+        
         buffer += e.key;
+        lastKeyProcessed = e.key;
+        lastKeyTime = now;
+        
         if (DEBUG) {
           console.log("[Barcode] ➕ Added char:", e.key, "CharCode:", e.key.charCodeAt(0), "Buffer:", buffer, "Time since last:", timeSinceLastKey, "IsScanning:", isScanning);
         }
@@ -388,11 +423,22 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   };
 
   // Also listen to keypress for better compatibility
+  // NOTE: We now handle characters in keydown, so keypress is mainly for timing detection
   const onKeyPress = (e: KeyboardEvent) => {
     // Some scanners may trigger keypress instead of keydown
+    // But we've already handled the character in keydown, so we just update timing here
     if (e.key.length === 1 && /^[0-9a-zA-Z\-_\.]$/.test(e.key)) {
       const now = Date.now();
       const timeSinceLastKey = now - lastTime;
+      
+      // Prevent duplicate processing - if we just processed this key in keydown, skip
+      const timeSinceLastKeyEvent = now - lastKeyTime;
+      if (e.key === lastKeyProcessed && timeSinceLastKeyEvent < DUPLICATE_KEY_THRESHOLD) {
+        if (DEBUG) {
+          console.log("[Barcode] ⏭️ KeyPress: Skipping duplicate key event:", e.key);
+        }
+        return; // Skip - already processed in keydown
+      }
       
       if (timeSinceLastKey > TIMEOUT_MS) {
         buffer = "";
@@ -402,9 +448,14 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
       }
       
       lastTime = now;
-      buffer += e.key;
-      if (DEBUG) {
-        console.log("[Barcode] KeyPress - Added char:", e.key, "Buffer:", buffer, "Time:", timeSinceLastKey, "IsScanning:", isScanning);
+      // Only add to buffer if not already added by keydown
+      if (timeSinceLastKeyEvent >= DUPLICATE_KEY_THRESHOLD || e.key !== lastKeyProcessed) {
+        buffer += e.key;
+        lastKeyProcessed = e.key;
+        lastKeyTime = now;
+        if (DEBUG) {
+          console.log("[Barcode] KeyPress - Added char:", e.key, "Buffer:", buffer, "Time:", timeSinceLastKey, "IsScanning:", isScanning);
+        }
       }
     }
   };
