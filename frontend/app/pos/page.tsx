@@ -59,9 +59,9 @@ export default function POSPage() {
         setLoading(false);
       }
     }, {
-      debug: isDev,
+      debug: true, // Enable debug in production for troubleshooting
       minLength: 3,
-      timeout: 200, // Increased timeout for more accurate detection
+      timeout: 300, // Increased timeout for slower scanners
       stripPrefix: true,
       stripSuffix: true,
     });
