@@ -15,19 +15,38 @@ let useLpFallback = false;
 async function loadUsbModule() {
   if (usbModuleLoaded) return;
   
-  // Always use lp fallback on macOS (more reliable)
-  // Native module has compatibility issues
+  const platform = process.platform;
+  
+  // macOS: Use lp fallback (more reliable)
+  if (platform === "darwin") {
+    try {
+      const usbFallback = await import("./usb-fallback.js");
+      sendToUsbRaw = (data: Buffer, opts: { printerName: string }) => 
+        usbFallback.sendToUsbViaLp(data, opts.printerName);
+      listPrinters = () => usbFallback.listPrintersViaLp();
+      useLpFallback = true;
+      usbModuleLoaded = true;
+      console.log("✅ USB printing via lp command (macOS)");
+      return;
+    } catch (fallbackError: any) {
+      console.warn("⚠️  lp fallback failed:", fallbackError.message?.substring(0, 100));
+    }
+  }
+  
+  // Windows/Linux: Try native printer module
   try {
-    const usbFallback = await import("./usb-fallback.js");
-    sendToUsbRaw = (data: Buffer, opts: { printerName: string }) => 
-      usbFallback.sendToUsbViaLp(data, opts.printerName);
-    listPrinters = () => usbFallback.listPrintersViaLp();
-    useLpFallback = true;
+    const usbModule = await import("./usb.js");
+    sendToUsbRaw = usbModule.sendToUsbRaw;
+    listPrinters = usbModule.listPrinters;
     usbModuleLoaded = true;
-    console.log("✅ USB printing via lp command (macOS)");
-  } catch (fallbackError: any) {
-    console.warn("⚠️  lp fallback failed:", fallbackError.message?.substring(0, 100));
-    usbModuleLoaded = true; // Mark as attempted
+    console.log(`✅ USB printing via native module (${platform})`);
+  } catch (nativeError: any) {
+    console.error(`❌ Failed to load USB printing module (${platform}):`, nativeError.message);
+    console.error("   This usually means:");
+    console.error("   - Windows: Install Visual Studio Build Tools or rebuild the module");
+    console.error("   - Linux: Install build-essential: sudo apt-get install build-essential");
+    console.error("   - Run: npm install (to rebuild native modules)");
+    usbModuleLoaded = true; // Mark as attempted to avoid retries
   }
 }
 
