@@ -9,14 +9,16 @@ O arquivo `vercel.json` na raiz do projeto está configurado assim:
 
 ```json
 {
-  "buildCommand": "cd frontend && yarn build",
+  "buildCommand": "yarn build",
   "outputDirectory": ".next",
-  "installCommand": "cd frontend && yarn install",
+  "installCommand": "yarn install",
   "framework": "nextjs"
 }
 ```
 
-**Nota:** A propriedade `rootDirectory` deve ser configurada no dashboard do Vercel (Settings → General → Root Directory), não no arquivo `vercel.json`.
+**Importante:** 
+- A propriedade `rootDirectory` deve ser configurada no dashboard do Vercel (Settings → General → Root Directory) como `frontend`
+- Como o `rootDirectory` está configurado no dashboard, os comandos no `vercel.json` são executados automaticamente dentro da pasta `frontend`, então não precisam do `cd frontend`
 
 ## Configuração no Vercel Dashboard
 
