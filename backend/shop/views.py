@@ -55,38 +55,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         return queryset
 
     def normalize_barcode_for_search(self, barcode_str):
-        """Normalize barcode by extracting valid pattern from potentially duplicated code"""
-        if not barcode_str:
-            return None
-        
-        # Convert to string and strip whitespace
-        barcode = str(barcode_str).strip()
-        
-        # Remove all whitespace characters (spaces, tabs, newlines)
-        barcode = ''.join(barcode.split())
-        
-        # Remove common non-printable characters
-        import re
-        barcode = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', barcode)
-        
-        # If barcode is too long, try to extract valid barcode (handle duplication)
-        if len(barcode) > 20:
-            # Try to find a repeating pattern
-            for length in [8, 12, 13, 14]:
-                pattern = barcode[:length]
-                if len(pattern) == length and pattern.isdigit():
-                    # Check if the code is just this pattern repeated
-                    repetitions = len(barcode) // length
-                    if pattern * repetitions == barcode[:length * repetitions]:
-                        return pattern
-                # Also check if code ends with a valid barcode
-                end_pattern = barcode[-length:]
-                if len(end_pattern) == length and end_pattern.isdigit():
-                    # Check if this pattern appears at the start too
-                    if barcode.startswith(end_pattern):
-                        return end_pattern
-        
-        return barcode
+        """Normalize barcode - delegates to module-level function"""
+        return normalize_barcode_for_search(barcode_str)
 
     @action(detail=False, methods=["get"], url_path="by-barcode/(?P<barcode>[^/.]+)")
     def by_barcode(self, request, barcode=None):
@@ -101,7 +71,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         logger.info(f"Barcode search requested: '{barcode}' (length: {len(barcode)})")
         
         # Normalize the searched barcode
-        normalized_search = self.normalize_barcode_for_search(barcode)
+        normalized_search = normalize_barcode_for_search(barcode)
         if not normalized_search:
             logger.warning(f"Invalid barcode after normalization: '{barcode}'")
             return Response({"detail": "INVALID_BARCODE"}, status=status.HTTP_400_BAD_REQUEST)
@@ -159,7 +129,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             all_products = Product.objects.select_related("inventory").all()
             for product in all_products:
                 # Normalize stored barcode the same way we normalize the search
-                normalized_stored = self.normalize_barcode_for_search(product.barcode)
+                normalized_stored = normalize_barcode_for_search(product.barcode)
                 if normalized_stored and normalized_stored == normalized_search:
                     logger.info(f"Found product via stored barcode normalization: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}')")
                     return Response(ProductSerializer(product).data)
@@ -173,8 +143,10 @@ class ProductViewSet(viewsets.ModelViewSet):
             if digits_only_search and len(digits_only_search) >= 8:
                 all_products = Product.objects.select_related("inventory").all()
                 for product in all_products:
-                    # Extract only digits from stored barcode
-                    digits_only_stored = ''.join(filter(str.isdigit, str(product.barcode)))
+                    # Normalize stored barcode first
+                    normalized_stored = normalize_barcode_for_search(product.barcode)
+                    # Extract only digits from normalized stored barcode
+                    digits_only_stored = ''.join(filter(str.isdigit, normalized_stored)) if normalized_stored else ''
                     if digits_only_stored == digits_only_search:
                         logger.info(f"Found product via digits-only match: {product.name} (stored: '{product.barcode}' -> digits: '{digits_only_stored}', search digits: '{digits_only_search}')")
                         return Response(ProductSerializer(product).data)
@@ -241,41 +213,80 @@ def checkout(request):
 
     with transaction.atomic():
         # Lock inventory rows to prevent race conditions
-        barcodes = [str(i["barcode"]) for i in items]
-        products = list(Product.objects.filter(barcode__in=barcodes).select_related("inventory"))
-        product_map = {p.barcode: p for p in products}
-
-        if len(products) != len(barcodes):
-            missing = set(barcodes) - set(product_map.keys())
-            return Response(
-                {"detail": f"PRODUCT_NOT_FOUND:{','.join(missing)}"}, status=status.HTTP_404_NOT_FOUND
-            )
+        # Normalize barcodes from request
+        normalized_barcodes = []
+        barcode_to_original = {}  # Map normalized to original for error messages
+        normalized_to_product = {}  # Map normalized barcode to product
+        
+        for item in items:
+            original_barcode = str(item["barcode"])
+            normalized = normalize_barcode_for_search(original_barcode)
+            if normalized:
+                normalized_barcodes.append(normalized)
+                barcode_to_original[normalized] = original_barcode
+        
+        # Try to find products with normalized barcodes (exact match first)
+        products = list(Product.objects.filter(barcode__in=normalized_barcodes).select_related("inventory"))
+        for product in products:
+            product_map_key = normalize_barcode_for_search(product.barcode) or product.barcode
+            normalized_to_product[product_map_key] = product
+        
+        # If not all found, try to normalize stored barcodes and match
+        if len(normalized_to_product) < len(normalized_barcodes):
+            missing_normalized = set(normalized_barcodes) - set(normalized_to_product.keys())
+            # Try to find by normalizing stored barcodes
+            all_products = Product.objects.select_related("inventory").all()
+            for product in all_products:
+                normalized_stored = normalize_barcode_for_search(product.barcode)
+                if normalized_stored and normalized_stored in missing_normalized:
+                    normalized_to_product[normalized_stored] = product
+                    products.append(product)
+                    missing_normalized.remove(normalized_stored)
+            
+            # If still missing, return error with original barcodes
+            if missing_normalized:
+                missing_original = [barcode_to_original.get(n, n) for n in missing_normalized]
+                return Response(
+                    {"detail": f"PRODUCT_NOT_FOUND:{','.join(missing_original)}"}, status=status.HTTP_404_NOT_FOUND
+                )
+        
+        # Create product_map using normalized barcodes
+        product_map = {}
+        for normalized_barcode in normalized_barcodes:
+            if normalized_barcode in normalized_to_product:
+                product_map[normalized_barcode] = normalized_to_product[normalized_barcode]
 
         subtotal = Decimal("0.00")
         tax_total = Decimal("0.00")
 
-        # Lock inventories for update
+        # Lock inventories for update - use product IDs from found products
+        product_ids = [p.id for p in products]
         inventories = (
             Inventory.objects.select_for_update()
-            .filter(product__barcode__in=barcodes)
+            .filter(product_id__in=product_ids)
             .select_related("product")
         )
-        inv_map = {inv.product.barcode: inv for inv in inventories}
+        # Create inv_map using normalized barcodes
+        inv_map = {}
+        for inv in inventories:
+            normalized_inv_barcode = normalize_barcode_for_search(inv.product.barcode) or inv.product.barcode
+            inv_map[normalized_inv_barcode] = inv
 
         # Validate quantities and compute totals
         for it in items:
-            barcode = str(it["barcode"])
+            original_barcode = str(it["barcode"])
+            normalized_barcode = normalize_barcode_for_search(original_barcode)
             qty = int(it["qty"])
             unit_price = Decimal(str(it["unit_price"]))
 
             if qty <= 0:
                 return Response({"detail": "INVALID_QTY"}, status=status.HTTP_400_BAD_REQUEST)
 
-            product = product_map.get(barcode)
-            inv = inv_map.get(barcode)
+            product = product_map.get(normalized_barcode)
+            inv = inv_map.get(normalized_barcode)
             if product is None or inv is None:
                 return Response(
-                    {"detail": f"PRODUCT_NOT_FOUND:{barcode}"}, status=status.HTTP_404_NOT_FOUND
+                    {"detail": f"PRODUCT_NOT_FOUND:{original_barcode}"}, status=status.HTTP_404_NOT_FOUND
                 )
 
             if inv.qty_on_hand < qty:
@@ -335,11 +346,12 @@ def checkout(request):
 
         # Create sale items and update inventory
         for it in items:
-            barcode = str(it["barcode"])
+            original_barcode = str(it["barcode"])
+            normalized_barcode = normalize_barcode_for_search(original_barcode)
             qty = int(it["qty"])
             unit_price = Decimal(str(it["unit_price"]))
-            product = product_map[barcode]
-            inv = inv_map[barcode]
+            product = product_map[normalized_barcode]
+            inv = inv_map[normalized_barcode]
 
             line_total = (unit_price * qty).quantize(Decimal("0.01"))
 
