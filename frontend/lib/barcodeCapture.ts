@@ -276,7 +276,19 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
 
     // Enter or Tab key signals end of barcode (some scanners send Tab)
     if (e.key === "Enter" || e.key === "Tab") {
+      // Log RAW buffer before any processing
+      if (DEBUG) {
+        console.log("[Barcode] 🔴 RAW BUFFER (before cleaning):", buffer, "Length:", buffer.length);
+        console.log("[Barcode] RAW buffer char codes:", Array.from(buffer).map(c => c.charCodeAt(0)).join(','));
+      }
+      
       const code = cleanBarcode(buffer);
+      
+      // Log after cleaning
+      if (DEBUG) {
+        console.log("[Barcode] 🟡 CLEANED CODE (after cleanBarcode):", code, "Length:", code.length);
+      }
+      
       const now = Date.now();
       
       // Validate code length
@@ -312,6 +324,15 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
       // Normalize the code before processing
       const normalizedCode = normalizeBarcode(code);
       
+      // Log normalization result
+      if (DEBUG) {
+        if (code !== normalizedCode) {
+          console.log("[Barcode] 🟢 NORMALIZED CODE (after normalizeBarcode):", normalizedCode, "from:", code);
+        } else {
+          console.log("[Barcode] 🟢 CODE (no normalization needed):", normalizedCode);
+        }
+      }
+      
       // Process if it's from scanner or meets minimum length
       if (isScanning || normalizedCode.length >= MIN_LENGTH) {
         // Use normalized code for duplicate check
@@ -325,6 +346,13 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
           e.stopPropagation();
           return;
         }
+        
+        // Log final code being sent to handler
+        if (DEBUG) {
+          console.log("[Barcode] ✅ FINAL CODE being sent to handler:", normalizedCode);
+          console.log("[Barcode] 📊 Summary - Raw buffer:", buffer, "Cleaned:", code, "Normalized:", normalizedCode);
+        }
+        
         processBarcode(normalizedCode, e);
       } else {
         buffer = "";
@@ -349,13 +377,13 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
       if (/^[0-9a-zA-Z\-_\.]$/.test(e.key)) {
         buffer += e.key;
         if (DEBUG) {
-          console.log("[Barcode] Added char:", e.key, "Buffer:", buffer, "Time since last:", timeSinceLastKey, "IsScanning:", isScanning);
+          console.log("[Barcode] ➕ Added char:", e.key, "CharCode:", e.key.charCodeAt(0), "Buffer:", buffer, "Time since last:", timeSinceLastKey, "IsScanning:", isScanning);
         }
       } else if (DEBUG) {
-        console.log("[Barcode] Ignored special char:", e.key, "Code:", e.key.charCodeAt(0));
+        console.log("[Barcode] ⚠️ Ignored special char:", e.key, "Code:", e.key.charCodeAt(0));
       }
     } else if (DEBUG && e.key !== "Enter" && e.key !== "Tab") {
-      console.log("[Barcode] Ignored key:", e.key);
+      console.log("[Barcode] ⚠️ Ignored key:", e.key);
     }
   };
 
