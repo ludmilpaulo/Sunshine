@@ -20,7 +20,8 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   let lastKeyTime = 0; // Track time of last key
   let enterKeyTime = 0; // Track when Enter was pressed
   let pendingEnterProcessing: NodeJS.Timeout | null = null; // Delay processing Enter to catch last digit
-  const TIMEOUT_MS = options?.timeout || 300; // Increased timeout for slower scanners (was 200ms)
+  let bufferStableTime = 0; // Track when buffer last changed
+  const TIMEOUT_MS = options?.timeout || 150; // Reduced to 150ms - scanners are typically very fast
   const MIN_LENGTH = options?.minLength || 3;
   const MAX_LENGTH = 50; // Maximum reasonable barcode length
   const DEBUG = options?.debug || false;
@@ -28,8 +29,9 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   const STRIP_SUFFIX = options?.stripSuffix ?? true;
   const DUPLICATE_THRESHOLD = 2000; // Ignore same code if scanned within 2 seconds
   const KEY_DUPLICATE_THRESHOLD = 50; // Ignore duplicate key events within 50ms
-  const ENTER_PROCESSING_DELAY = 100; // Wait 100ms after Enter before processing to catch last digit (increased from 50ms)
-  const MAX_ENTER_WAIT_TIME = 200; // Maximum time to wait for additional digits after Enter
+  const ENTER_PROCESSING_DELAY = 150; // Wait 150ms after Enter before processing to catch last digit
+  const MAX_ENTER_WAIT_TIME = 300; // Maximum time to wait for additional digits after Enter
+  const BUFFER_STABLE_TIME = 50; // Time buffer must be stable before processing
 
   // Common scanner prefixes/suffixes to strip
   const PREFIXES = ["STX", "\x02", "GS", "\x1D"];
@@ -123,27 +125,53 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
     // Normalize barcode - remove duplicates if detected
     let normalized = code.trim();
     
+    // Remove any non-printable characters first
+    normalized = normalized.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+    
     // If code is too long, try to extract valid barcode
     if (normalized.length > 20) {
-      // Try to find repeating pattern
+      // Try to find repeating pattern (most common issue)
       for (let length = 8; length <= 14; length++) {
         const pattern = normalized.substring(0, length);
         if (pattern.length === length && /^\d+$/.test(pattern)) {
           const repetitions = Math.floor(normalized.length / length);
-          if (pattern.repeat(repetitions) === normalized.substring(0, pattern.length * repetitions)) {
+          const expectedRepeated = pattern.repeat(repetitions);
+          const actualPrefix = normalized.substring(0, pattern.length * repetitions);
+          
+          // Check if the code is exactly the pattern repeated
+          if (expectedRepeated === actualPrefix) {
             if (DEBUG) {
-              console.log("[Barcode] Normalized from", normalized, "to", pattern);
+              console.log("[Barcode] Normalized from", normalized, "to", pattern, "(repeating pattern)");
             }
             return pattern;
           }
         }
+        
         // Check if code ends with a valid barcode that also appears at start
-        const endPattern = normalized.substring(normalized.length - length);
-        if (endPattern.length === length && /^\d+$/.test(endPattern) && normalized.startsWith(endPattern)) {
-          if (DEBUG) {
-            console.log("[Barcode] Normalized from", normalized, "to", endPattern);
+        if (normalized.length >= length) {
+          const endPattern = normalized.substring(normalized.length - length);
+          if (endPattern.length === length && /^\d+$/.test(endPattern)) {
+            // Check if this pattern appears at the start too (duplicated barcode)
+            if (normalized.startsWith(endPattern)) {
+              if (DEBUG) {
+                console.log("[Barcode] Normalized from", normalized, "to", endPattern, "(start/end match)");
+              }
+              return endPattern;
+            }
           }
-          return endPattern;
+        }
+      }
+      
+      // If no pattern found, try to extract first valid-length barcode
+      for (let length of [13, 12, 14, 8, 11, 10]) {
+        if (normalized.length >= length) {
+          const candidate = normalized.substring(0, length);
+          if (/^\d+$/.test(candidate)) {
+            if (DEBUG) {
+              console.log("[Barcode] Extracted first", length, "digits:", candidate);
+            }
+            return candidate;
+          }
         }
       }
     }
@@ -162,10 +190,12 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
     
     buffer = "";
     isScanning = false;
+    bufferStableTime = 0;
     lastScannedCode = normalizedCode;
     lastScannedTime = Date.now();
     lastKeyProcessed = ""; // Reset after processing
     lastKeyTime = 0; // Reset after processing
+    enterKeyTime = 0; // Reset enter key time
     
     if (DEBUG) {
       console.log("[Barcode] ✅ Valid barcode received:", normalizedCode, "Length:", normalizedCode.length, "Original:", code);
@@ -177,8 +207,8 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
 
   // Separate function to process Enter key after delay
   const processEnterKey = (e: KeyboardEvent) => {
-    const code = cleanBarcode(buffer);
     const processTime = Date.now();
+    const code = cleanBarcode(buffer);
     
     if (DEBUG) {
       console.log("[Barcode] Processing Enter - Buffer:", buffer, "Cleaned:", code, "Length:", code.length);
@@ -188,47 +218,57 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
     if (code.length < MIN_LENGTH) {
       buffer = "";
       isScanning = false;
+      bufferStableTime = 0;
       if (DEBUG) {
         console.log("[Barcode] Code too short, ignoring. Code:", code, "Length:", code.length);
       }
       return;
     }
     
-    if (code.length > MAX_LENGTH) {
-      // Code is too long - might be duplicated or corrupted
+    // Normalize the code first to handle duplicates
+    const normalizedCode = normalizeBarcode(code);
+    
+    if (normalizedCode.length > MAX_LENGTH) {
+      // Code is still too long after normalization - might be corrupted
       // Try to extract valid barcode from it
-      const possibleCodes = extractValidBarcodes(code);
+      const possibleCodes = extractValidBarcodes(normalizedCode);
       if (possibleCodes.length > 0) {
         const validCode = possibleCodes[0]; // Use first valid code
         if (DEBUG) {
-          console.log("[Barcode] Code too long, extracted valid code:", validCode, "from:", code);
+          console.log("[Barcode] Code too long, extracted valid code:", validCode, "from:", normalizedCode);
         }
         processBarcode(validCode, e);
       } else {
         if (DEBUG) {
-          console.log("[Barcode] Code too long and no valid barcode found:", code);
+          console.log("[Barcode] Code too long and no valid barcode found:", normalizedCode);
         }
         buffer = "";
         isScanning = false;
+        bufferStableTime = 0;
       }
       return;
     }
     
+    // Use normalized code for duplicate check and processing
+    const finalCode = normalizedCode.length >= MIN_LENGTH ? normalizedCode : code;
+    
     // Check for duplicate scans (same code within threshold time)
-    if (code === lastScannedCode && (processTime - lastScannedTime) < DUPLICATE_THRESHOLD) {
+    if (finalCode === lastScannedCode && (processTime - lastScannedTime) < DUPLICATE_THRESHOLD) {
       if (DEBUG) {
-        console.log("[Barcode] Duplicate scan detected, ignoring:", code);
+        console.log("[Barcode] Duplicate scan detected, ignoring:", finalCode);
       }
       buffer = "";
       isScanning = false;
+      bufferStableTime = 0;
       return;
     }
     
-    if (isScanning || code.length >= MIN_LENGTH) {
-      processBarcode(code, e);
+    if (isScanning || finalCode.length >= MIN_LENGTH) {
+      processBarcode(finalCode, e);
     } else {
       buffer = "";
       isScanning = false;
+      bufferStableTime = 0;
       if (DEBUG) {
         console.log("[Barcode] Not from scanner, letting event proceed");
       }
@@ -249,9 +289,11 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
       }
       buffer = "";
       isScanning = false;
+      bufferStableTime = 0;
     } else if (isFastInput && buffer.length === 0) {
       // Start of a potential scan
       isScanning = true;
+      bufferStableTime = now;
       if (DEBUG) {
         console.log("[Barcode] Potential scan started");
       }
@@ -274,19 +316,30 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
         pendingEnterProcessing = null;
       }
       
-      // Store current buffer length to detect if more digits arrive
+      // Store current buffer state
       const bufferLengthAtEnter = buffer.length;
+      const bufferAtEnter = buffer;
       
-      // Delay processing to ensure we capture the last digit before Enter
-      // Some scanners send Enter very quickly after the last digit
-      // Use a longer delay and check if buffer grew during that time
+      // Check if buffer has been stable (no changes for a while)
+      const timeSinceBufferChange = now - bufferStableTime;
+      const isBufferStable = timeSinceBufferChange >= BUFFER_STABLE_TIME;
+      
+      if (DEBUG) {
+        console.log("[Barcode] Enter pressed - Buffer:", buffer, "Length:", bufferLengthAtEnter, "Stable:", isBufferStable, "Time since change:", timeSinceBufferChange);
+      }
+      
+      // If buffer is stable and has minimum length, process immediately
+      // Otherwise, wait a bit to catch any trailing digits
+      const delay = isBufferStable && bufferLengthAtEnter >= MIN_LENGTH ? 50 : ENTER_PROCESSING_DELAY;
+      
       pendingEnterProcessing = setTimeout(() => {
         const finalBufferLength = buffer.length;
+        const finalBuffer = buffer;
         
         // If buffer grew after Enter was pressed, wait a bit more
-        if (finalBufferLength > bufferLengthAtEnter) {
+        if (finalBufferLength > bufferLengthAtEnter || finalBuffer !== bufferAtEnter) {
           if (DEBUG) {
-            console.log("[Barcode] ⚠️ Buffer grew after Enter (", bufferLengthAtEnter, "->", finalBufferLength, "), waiting more...");
+            console.log("[Barcode] ⚠️ Buffer changed after Enter (", bufferLengthAtEnter, "->", finalBufferLength, "), waiting more...");
           }
           // Wait additional time for more digits
           pendingEnterProcessing = setTimeout(() => {
@@ -298,7 +351,7 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
         
         processEnterKey(e);
         pendingEnterProcessing = null;
-      }, ENTER_PROCESSING_DELAY);
+      }, delay);
       
       return;
     }
@@ -361,6 +414,7 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
         buffer += e.key;
         lastKeyProcessed = e.key;
         lastKeyTime = now;
+        bufferStableTime = now; // Update stable time when buffer changes
         
         if (DEBUG) {
           console.log("[Barcode] Added char:", e.key, "Buffer:", buffer, "Time since last:", timeSinceLastKey);

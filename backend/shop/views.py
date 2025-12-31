@@ -33,20 +33,31 @@ def normalize_barcode_for_search(barcode_str):
     
     # If barcode is too long, try to extract valid barcode (handle duplication)
     if len(barcode) > 20:
-        # Try to find a repeating pattern
-        for length in [8, 12, 13, 14]:
+        # Try to find a repeating pattern (most common issue)
+        for length in [8, 12, 13, 14, 11, 10]:
             pattern = barcode[:length]
             if len(pattern) == length and pattern.isdigit():
                 # Check if the code is just this pattern repeated
                 repetitions = len(barcode) // length
-                if pattern * repetitions == barcode[:length * repetitions]:
+                expected_repeated = pattern * repetitions
+                actual_prefix = barcode[:length * repetitions]
+                if expected_repeated == actual_prefix:
                     return pattern
-            # Also check if code ends with a valid barcode
-            end_pattern = barcode[-length:]
-            if len(end_pattern) == length and end_pattern.isdigit():
-                # Check if this pattern appears at the start too
-                if barcode.startswith(end_pattern):
-                    return end_pattern
+            
+            # Also check if code ends with a valid barcode that matches start
+            if len(barcode) >= length:
+                end_pattern = barcode[-length:]
+                if len(end_pattern) == length and end_pattern.isdigit():
+                    # Check if this pattern appears at the start too (duplicated barcode)
+                    if barcode.startswith(end_pattern):
+                        return end_pattern
+        
+        # If no repeating pattern found, try to extract first valid-length barcode
+        for length in [13, 12, 14, 8, 11, 10]:
+            if len(barcode) >= length:
+                candidate = barcode[:length]
+                if candidate.isdigit():
+                    return candidate
     
     return barcode
 
@@ -103,7 +114,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response({"detail": "BARCODE_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
         
         # Log the received barcode for debugging
-        logger.info(f"Barcode search requested: '{barcode}' (length: {len(barcode)})")
+        logger.info(f"Barcode search requested: '{barcode}' (length: {len(barcode)}, type: {type(barcode)})")
         
         # Normalize the searched barcode
         normalized_search = normalize_barcode_for_search(barcode)
@@ -113,11 +124,11 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         logger.info(f"Normalized barcode: '{normalized_search}' (original: '{barcode}')")
         
-        # Strategy 1: Try exact match with normalized code (most common case)
+        # Strategy 1: Try exact match with normalized code (most common case - prioritize this)
         try:
             product = Product.objects.select_related("inventory").filter(barcode=normalized_search).first()
             if product:
-                logger.info(f"Found product via exact match: {product.name}")
+                logger.info(f"✅ Found product via exact normalized match: {product.name} (barcode: {product.barcode})")
                 return Response(ProductSerializer(product).data)
         except Exception as e:
             logger.error(f"Error in exact match search: {e}")
@@ -127,49 +138,69 @@ class ProductViewSet(viewsets.ModelViewSet):
             try:
                 product = Product.objects.select_related("inventory").filter(barcode=barcode).first()
                 if product:
-                    logger.info(f"Found product via original code match: {product.name}")
+                    logger.info(f"✅ Found product via original code match: {product.name} (barcode: {product.barcode})")
                     return Response(ProductSerializer(product).data)
             except Exception as e:
                 logger.error(f"Error in original code search: {e}")
         
-        # Strategy 3: Try case-insensitive match
+        # Strategy 3: Try case-insensitive match (for alphanumeric codes)
         try:
             product = Product.objects.select_related("inventory").filter(barcode__iexact=normalized_search).first()
             if product:
-                logger.info(f"Found product via case-insensitive match: {product.name}")
+                logger.info(f"✅ Found product via case-insensitive match: {product.name} (barcode: {product.barcode})")
                 return Response(ProductSerializer(product).data)
         except Exception as e:
             logger.error(f"Error in case-insensitive search: {e}")
         
         # Strategy 4: Try to find products where barcode contains the normalized code (for duplicated codes in DB)
-        if len(normalized_search) >= 8:
+        # Only if normalized_search is at least 7 characters (reduced from 8 for shorter codes)
+        if len(normalized_search) >= 7:
             try:
-                # Try contains match
-                product = Product.objects.select_related("inventory").filter(barcode__contains=normalized_search).first()
-                if product:
-                    logger.info(f"Found product via contains match: {product.name} (stored barcode: {product.barcode})")
-                    return Response(ProductSerializer(product).data)
-                
-                # Try startswith match
+                # Try startswith match first (more specific than contains)
                 product = Product.objects.select_related("inventory").filter(barcode__startswith=normalized_search).first()
                 if product:
-                    logger.info(f"Found product via startswith match: {product.name} (stored barcode: {product.barcode})")
-                    return Response(ProductSerializer(product).data)
+                    # Verify it's a meaningful match (not just a substring by chance)
+                    stored_normalized = normalize_barcode_for_search(product.barcode)
+                    if stored_normalized and (stored_normalized == normalized_search or stored_normalized.startswith(normalized_search)):
+                        logger.info(f"✅ Found product via startswith match: {product.name} (stored: '{product.barcode}' -> normalized: '{stored_normalized}')")
+                        return Response(ProductSerializer(product).data)
+                
+                # Try contains match (less specific, but handles some edge cases)
+                product = Product.objects.select_related("inventory").filter(barcode__contains=normalized_search).first()
+                if product:
+                    stored_normalized = normalize_barcode_for_search(product.barcode)
+                    if stored_normalized and normalized_search in stored_normalized:
+                        # Only accept if it's at start/end or lengths are similar
+                        stored_len = len(stored_normalized) if stored_normalized else 0
+                        search_len = len(normalized_search)
+                        if (stored_normalized.startswith(normalized_search) or 
+                            stored_normalized.endswith(normalized_search) or 
+                            abs(stored_len - search_len) <= 3):
+                            logger.info(f"✅ Found product via contains match: {product.name} (stored: '{product.barcode}' -> normalized: '{stored_normalized}')")
+                            return Response(ProductSerializer(product).data)
             except Exception as e:
                 logger.error(f"Error in contains/startswith search: {e}")
         
         # Strategy 5: Try to normalize stored barcodes and match (for duplicated codes in DB)
         # This handles cases where stored barcodes have spaces or special characters
-        try:
-            all_products = Product.objects.select_related("inventory").all()
-            for product in all_products:
-                # Normalize stored barcode the same way we normalize the search
-                normalized_stored = normalize_barcode_for_search(product.barcode)
-                if normalized_stored and normalized_stored == normalized_search:
-                    logger.info(f"Found product via stored barcode normalization: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}')")
-                    return Response(ProductSerializer(product).data)
-        except Exception as e:
-            logger.error(f"Error in stored barcode normalization search: {e}")
+        # Only do this if we haven't found a match yet and the search code is reasonable length
+        if len(normalized_search) >= 6:
+            try:
+                # Filter products where barcode might match after normalization
+                # Check products where barcode contains the search code or is similar length
+                # This is more efficient than checking all products
+                candidate_products = Product.objects.select_related("inventory").filter(
+                    barcode__icontains=normalized_search[:min(8, len(normalized_search))]  # Use first 8 chars for filtering
+                )
+                
+                for product in candidate_products:
+                    # Normalize stored barcode the same way we normalize the search
+                    normalized_stored = normalize_barcode_for_search(product.barcode)
+                    if normalized_stored and normalized_stored == normalized_search:
+                        logger.info(f"✅ Found product via stored barcode normalization: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}')")
+                        return Response(ProductSerializer(product).data)
+            except Exception as e:
+                logger.error(f"Error in stored barcode normalization search: {e}")
         
         # Strategy 6: Try removing all non-digit characters and matching (for alphanumeric codes)
         try:

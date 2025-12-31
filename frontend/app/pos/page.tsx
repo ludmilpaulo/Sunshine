@@ -35,39 +35,73 @@ export default function POSPage() {
     const isDev = process.env.NODE_ENV === "development";
     
     const cleanup = attachBarcodeCapture(async (barcode) => {
-      console.log("📷 Barcode scanned:", barcode, "Length:", barcode.length);
+      // Validate barcode before processing
+      if (!barcode || barcode.trim().length < 3) {
+        console.warn("📷 Invalid barcode received:", barcode);
+        return;
+      }
+      
+      const trimmedBarcode = barcode.trim();
+      console.log("📷 Barcode scanned:", trimmedBarcode, "Length:", trimmedBarcode.length);
+      
       setLoading(true);
       try {
-        console.log("🔍 Searching for product with barcode:", barcode);
-        const product = await productsApi.getByBarcode(barcode);
+        console.log("🔍 Searching for product with barcode:", trimmedBarcode);
+        const product = await productsApi.getByBarcode(trimmedBarcode);
         console.log("✅ Product found:", product);
+        
+        if (!product) {
+          toast.error(`Produto não encontrado com código: ${trimmedBarcode}`, {
+            duration: 5000,
+            icon: "⚠️",
+          });
+          return;
+        }
+        
         if (product.active) {
           addItem(product);
-          toast.success(`Adicionado ${product.name}`);
+          toast.success(`Adicionado ${product.name}`, {
+            duration: 2000,
+            icon: "✅",
+          });
         } else {
-          toast.error("Produto está inativo");
+          toast.error("Produto está inativo", {
+            duration: 3000,
+            icon: "⚠️",
+          });
         }
       } catch (error: any) {
         console.error("❌ Error fetching product:", error);
         console.error("Error response:", error.response?.data);
+        
         if (error.response?.status === 404) {
           const errorData = error.response?.data;
-          const message = errorData?.message || `Produto não encontrado com código: ${barcode}`;
+          const message = errorData?.message || `Produto não encontrado com código: ${trimmedBarcode}`;
           toast.error(message, {
             duration: 5000,
             icon: "⚠️",
           });
-          console.warn(`Produto não encontrado. Código escaneado: "${barcode}". Verifique se o produto está cadastrado no sistema.`);
+          console.warn(`Produto não encontrado. Código escaneado: "${trimmedBarcode}". Verifique se o produto está cadastrado no sistema.`);
+        } else if (error.response?.status === 400) {
+          const errorData = error.response?.data;
+          const detail = errorData?.detail || "Código de barras inválido";
+          toast.error(detail, {
+            duration: 4000,
+            icon: "⚠️",
+          });
         } else {
-          toast.error(`Falha ao buscar produto: ${error.message || "Erro desconhecido"}`);
+          toast.error(`Falha ao buscar produto: ${error.message || "Erro desconhecido"}`, {
+            duration: 4000,
+            icon: "❌",
+          });
         }
       } finally {
         setLoading(false);
       }
     }, {
-      debug: true, // Enable debug in production for troubleshooting
+      debug: process.env.NODE_ENV === "development", // Only debug in development
       minLength: 3,
-      timeout: 300, // Increased timeout for slower scanners
+      timeout: 150, // Optimized timeout for fast scanners
       stripPrefix: true,
       stripSuffix: true,
     });
