@@ -14,6 +14,41 @@ from .serializers import (
     SaleSerializer,
     StockMoveSerializer,
 )
+import re
+
+
+def normalize_barcode_for_search(barcode_str):
+    """Normalize barcode by extracting valid pattern from potentially duplicated code"""
+    if not barcode_str:
+        return None
+    
+    # Convert to string and strip whitespace
+    barcode = str(barcode_str).strip()
+    
+    # Remove all whitespace characters (spaces, tabs, newlines)
+    barcode = ''.join(barcode.split())
+    
+    # Remove common non-printable characters
+    barcode = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', barcode)
+    
+    # If barcode is too long, try to extract valid barcode (handle duplication)
+    if len(barcode) > 20:
+        # Try to find a repeating pattern
+        for length in [8, 12, 13, 14]:
+            pattern = barcode[:length]
+            if len(pattern) == length and pattern.isdigit():
+                # Check if the code is just this pattern repeated
+                repetitions = len(barcode) // length
+                if pattern * repetitions == barcode[:length * repetitions]:
+                    return pattern
+            # Also check if code ends with a valid barcode
+            end_pattern = barcode[-length:]
+            if len(end_pattern) == length and end_pattern.isdigit():
+                # Check if this pattern appears at the start too
+                if barcode.startswith(end_pattern):
+                    return end_pattern
+    
+    return barcode
 
 
 class StandardResultsSetPagination(PageNumberPagination):
