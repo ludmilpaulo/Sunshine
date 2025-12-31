@@ -154,7 +154,7 @@ SIMPLE_JWT = {
 # CORS Settings
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://localhost:3001,https://sunshine-pos.vercel.app,https://sunshinebar.vercel.app",
+    default="http://localhost:3000,http://localhost:3001,https://sunshinebar.vercel.app",
     cast=lambda v: [s.strip() for s in v.split(",")],
 )
 # Allow all origins in development (use with caution in production)
