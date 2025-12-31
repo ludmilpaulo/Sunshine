@@ -326,7 +326,7 @@ def checkout(request):
 
             if inv.qty_on_hand < qty:
                 return Response(
-                    {"detail": f"OUT_OF_STOCK:{barcode}:{inv.qty_on_hand}"}, status=status.HTTP_409_CONFLICT
+                    {"detail": f"OUT_OF_STOCK:{original_barcode}:{inv.qty_on_hand}"}, status=status.HTTP_409_CONFLICT
                 )
 
             line_total = unit_price * qty

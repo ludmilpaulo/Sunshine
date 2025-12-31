@@ -116,27 +116,59 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
     // Normalize barcode - remove duplicates if detected
     let normalized = code.trim();
     
-    // If code is too long, try to extract valid barcode
+    // Remove all whitespace
+    normalized = normalized.replace(/\s+/g, '');
+    
+    // If code is too long, try to extract valid barcode (handle duplication)
     if (normalized.length > 20) {
       // Try to find repeating pattern
       for (let length = 8; length <= 14; length++) {
         const pattern = normalized.substring(0, length);
         if (pattern.length === length && /^\d+$/.test(pattern)) {
           const repetitions = Math.floor(normalized.length / length);
-          if (pattern.repeat(repetitions) === normalized.substring(0, pattern.length * repetitions)) {
+          const expectedDuplicated = pattern.repeat(repetitions);
+          const actualCode = normalized.substring(0, pattern.length * repetitions);
+          
+          // Check if the code is just this pattern repeated
+          if (expectedDuplicated === actualCode) {
             if (DEBUG) {
-              console.log("[Barcode] Normalized from", normalized, "to", pattern);
+              console.log("[Barcode] Normalized from", normalized, "to", pattern, "(duplicated pattern detected)");
+            }
+            return pattern;
+          }
+          
+          // Check if code starts with pattern repeated 2 or 3 times
+          if (normalized.startsWith(pattern.repeat(2)) || normalized.startsWith(pattern.repeat(3))) {
+            if (DEBUG) {
+              console.log("[Barcode] Normalized from", normalized, "to", pattern, "(pattern repeated at start)");
             }
             return pattern;
           }
         }
+        
         // Check if code ends with a valid barcode that also appears at start
         const endPattern = normalized.substring(normalized.length - length);
-        if (endPattern.length === length && /^\d+$/.test(endPattern) && normalized.startsWith(endPattern)) {
-          if (DEBUG) {
-            console.log("[Barcode] Normalized from", normalized, "to", endPattern);
+        if (endPattern.length === length && /^\d+$/.test(endPattern)) {
+          // Check if this pattern appears multiple times at the start
+          if (normalized.startsWith(endPattern.repeat(2)) || normalized.startsWith(endPattern.repeat(3))) {
+            if (DEBUG) {
+              console.log("[Barcode] Normalized from", normalized, "to", endPattern, "(pattern at start and end)");
+            }
+            return endPattern;
           }
-          return endPattern;
+        }
+      }
+      
+      // If no pattern found, try to extract first valid length (8, 12, 13, 14 digits)
+      for (let length of [13, 12, 14, 8]) {
+        if (normalized.length >= length) {
+          const candidate = normalized.substring(0, length);
+          if (/^\d+$/.test(candidate)) {
+            if (DEBUG) {
+              console.log("[Barcode] Extracted first", length, "digits from", normalized, "->", candidate);
+            }
+            return candidate;
+          }
         }
       }
     }

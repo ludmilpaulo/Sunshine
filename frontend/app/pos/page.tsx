@@ -91,8 +91,35 @@ export default function POSPage() {
 
     setCheckoutLoading(true);
     try {
+      // Normalize barcodes before sending to prevent duplication issues
+      const normalizeBarcode = (barcode: string): string => {
+        let normalized = barcode.trim().replace(/\s+/g, '');
+        // If code is too long, try to extract valid barcode (handle duplication)
+        if (normalized.length > 20) {
+          for (let length = 8; length <= 14; length++) {
+            const pattern = normalized.substring(0, length);
+            if (pattern.length === length && /^\d+$/.test(pattern)) {
+              const repetitions = Math.floor(normalized.length / length);
+              if (pattern.repeat(repetitions) === normalized.substring(0, pattern.length * repetitions)) {
+                return pattern;
+              }
+            }
+          }
+          // Extract first valid length if no pattern found
+          for (let length of [13, 12, 14, 8]) {
+            if (normalized.length >= length) {
+              const candidate = normalized.substring(0, length);
+              if (/^\d+$/.test(candidate)) {
+                return candidate;
+              }
+            }
+          }
+        }
+        return normalized;
+      };
+      
       const checkoutItems = items.map((item) => ({
-        barcode: item.product.barcode,
+        barcode: normalizeBarcode(item.product.barcode),
         qty: item.qty,
         unit_price: item.unit_price,
       }));
