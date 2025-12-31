@@ -190,8 +190,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         # Strategy 7: Try to find if the scanned code appears within any stored barcode
         # This handles cases where stored barcodes are duplicated or contain the scanned code
+        # Also handles cases where scanner reads partial codes (e.g., 5491472 vs 54491472)
         try:
-            if len(normalized_search) >= 8:
+            if len(normalized_search) >= 7:  # Reduced from 8 to 7 to handle shorter codes
                 all_products = Product.objects.select_related("inventory").all()
                 for product in all_products:
                     # Normalize stored barcode
@@ -204,13 +205,21 @@ class ProductViewSet(viewsets.ModelViewSet):
                             stored_len = len(normalized_stored)
                             search_len = len(normalized_search)
                             
-                            # If stored is much longer, it might be duplicated
-                            if stored_len >= search_len * 2:
+                            # Priority 1: If scanned code is at the start or end of stored code
+                            if normalized_stored.startswith(normalized_search) or normalized_stored.endswith(normalized_search):
+                                # Accept if lengths are close (within 3 digits) or if stored is much longer (duplicated)
+                                if abs(stored_len - search_len) <= 3 or stored_len >= search_len * 2:
+                                    logger.info(f"Found product via start/end substring match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
+                                    return Response(ProductSerializer(product).data)
+                            
+                            # Priority 2: If stored is much longer, it might be duplicated
+                            elif stored_len >= search_len * 2:
                                 # Check if stored barcode contains the search code as a repeating pattern
                                 if normalized_stored.startswith(normalized_search) or normalized_stored.endswith(normalized_search):
                                     logger.info(f"Found product via substring match in duplicated barcode: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
                                     return Response(ProductSerializer(product).data)
-                            # If stored barcode contains the search code and lengths are similar
+                            
+                            # Priority 3: If stored barcode contains the search code and lengths are similar
                             elif abs(stored_len - search_len) <= 2:
                                 logger.info(f"Found product via substring match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
                                 return Response(ProductSerializer(product).data)
@@ -220,12 +229,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         # Strategy 8: Try to find products where stored barcode appears in scanned code
         # This handles cases where scanner might be adding extra digits or the stored code is shorter
         try:
-            if len(normalized_search) >= 8:
+            if len(normalized_search) >= 7:  # Reduced from 8 to 7
                 all_products = Product.objects.select_related("inventory").all()
                 for product in all_products:
                     # Normalize stored barcode
                     normalized_stored = normalize_barcode_for_search(product.barcode)
-                    if normalized_stored and len(normalized_stored) >= 8:
+                    if normalized_stored and len(normalized_stored) >= 7:  # Reduced from 8 to 7
                         # Check if stored barcode appears in scanned code
                         if normalized_stored in normalized_search:
                             stored_len = len(normalized_stored)
@@ -237,6 +246,39 @@ class ProductViewSet(viewsets.ModelViewSet):
                                 return Response(ProductSerializer(product).data)
         except Exception as e:
             logger.error(f"Error in reverse substring search: {e}")
+        
+        # Strategy 9: Try to find products where scanned code is a prefix/suffix of stored code
+        # Handles cases like: scanned "5491472" (7 digits) matching stored "54491472" (8 digits)
+        try:
+            if len(normalized_search) >= 6:  # Allow codes as short as 6 digits
+                all_products = Product.objects.select_related("inventory").all()
+                for product in all_products:
+                    normalized_stored = normalize_barcode_for_search(product.barcode)
+                    if normalized_stored and len(normalized_stored) >= len(normalized_search):
+                        # Check if scanned code matches the start or end of stored code
+                        # Allow for 1-2 digit difference (common in barcode variations)
+                        stored_len = len(normalized_stored)
+                        search_len = len(normalized_search)
+                        
+                        # If stored code starts with scanned code (e.g., "54491472" starts with "5491472" - missing first digit)
+                        if normalized_stored.startswith(normalized_search) or normalized_stored.endswith(normalized_search):
+                            if abs(stored_len - search_len) <= 2:
+                                logger.info(f"Found product via prefix/suffix match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
+                                return Response(ProductSerializer(product).data)
+                        
+                        # Also check if scanned code matches stored code with 1-2 digits removed from start/end
+                        # e.g., "5491472" matches "54491472" (missing '4' at start)
+                        if stored_len == search_len + 1 or stored_len == search_len + 2:
+                            # Try removing first digit(s) from stored
+                            if normalized_stored[1:] == normalized_search or normalized_stored[2:] == normalized_search:
+                                logger.info(f"Found product via stored-with-prefix match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
+                                return Response(ProductSerializer(product).data)
+                            # Try removing last digit(s) from stored
+                            if normalized_stored[:-1] == normalized_search or normalized_stored[:-2] == normalized_search:
+                                logger.info(f"Found product via stored-with-suffix match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
+                                return Response(ProductSerializer(product).data)
+        except Exception as e:
+            logger.error(f"Error in prefix/suffix search: {e}")
         
         # Log all attempted searches for debugging
         logger.warning(f"Product not found for barcode: '{barcode}' (normalized: '{normalized_search}')")
