@@ -28,7 +28,8 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   const STRIP_SUFFIX = options?.stripSuffix ?? true;
   const DUPLICATE_THRESHOLD = 2000; // Ignore same code if scanned within 2 seconds
   const KEY_DUPLICATE_THRESHOLD = 50; // Ignore duplicate key events within 50ms
-  const ENTER_PROCESSING_DELAY = 50; // Wait 50ms after Enter before processing to catch last digit
+  const ENTER_PROCESSING_DELAY = 100; // Wait 100ms after Enter before processing to catch last digit (increased from 50ms)
+  const MAX_ENTER_WAIT_TIME = 200; // Maximum time to wait for additional digits after Enter
 
   // Common scanner prefixes/suffixes to strip
   const PREFIXES = ["STX", "\x02", "GS", "\x1D"];
@@ -213,9 +214,34 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
         pendingEnterProcessing = null;
       }
       
+      // Store current buffer length to detect if more digits arrive
+      const bufferLengthAtEnter = buffer.length;
+      
       // Delay processing to ensure we capture the last digit before Enter
       // Some scanners send Enter very quickly after the last digit
+      // Use a longer delay and check if buffer grew during that time
       pendingEnterProcessing = setTimeout(() => {
+        const finalBufferLength = buffer.length;
+        
+        // If buffer grew after Enter was pressed, wait a bit more
+        if (finalBufferLength > bufferLengthAtEnter) {
+          if (DEBUG) {
+            console.log("[Barcode] ⚠️ Buffer grew after Enter (", bufferLengthAtEnter, "->", finalBufferLength, "), waiting more...");
+          }
+          // Wait additional time for more digits
+          pendingEnterProcessing = setTimeout(() => {
+            processEnterKey(e);
+            pendingEnterProcessing = null;
+          }, ENTER_PROCESSING_DELAY);
+          return;
+        }
+        
+        processEnterKey(e);
+        pendingEnterProcessing = null;
+      }, ENTER_PROCESSING_DELAY);
+      
+      return;
+    }
         const code = cleanBarcode(buffer);
         const processTime = Date.now();
         
@@ -299,15 +325,37 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
         
         // If Enter was just pressed, cancel pending processing and extend delay
         // This handles cases where the last digit arrives after Enter
-        if (enterKeyTime > 0 && (now - enterKeyTime) < ENTER_PROCESSING_DELAY) {
+        if (enterKeyTime > 0 && (now - enterKeyTime) < MAX_ENTER_WAIT_TIME) {
           if (pendingEnterProcessing) {
             clearTimeout(pendingEnterProcessing);
             pendingEnterProcessing = null;
             if (DEBUG) {
-              console.log("[Barcode] ⚠️ Last digit arrived after Enter, extending processing delay");
+              console.log("[Barcode] ⚠️ Digit arrived after Enter (", now - enterKeyTime, "ms), resetting delay. Buffer:", buffer);
             }
+            
+            // Reset and wait again for more digits
+            enterKeyTime = now;
+            const currentBufferLength = buffer.length;
+            
+            pendingEnterProcessing = setTimeout(() => {
+              const finalLength = buffer.length;
+              if (finalLength > currentBufferLength) {
+                // Still receiving digits, wait more
+                if (DEBUG) {
+                  console.log("[Barcode] Still receiving digits (", currentBufferLength, "->", finalLength, "), waiting more...");
+                }
+                pendingEnterProcessing = setTimeout(() => {
+                  processEnterKey(e);
+                  pendingEnterProcessing = null;
+                }, ENTER_PROCESSING_DELAY);
+              } else {
+                processEnterKey(e);
+                pendingEnterProcessing = null;
+              }
+            }, ENTER_PROCESSING_DELAY);
           }
-          // Reset enter key time since we got another character
+        } else if (enterKeyTime > 0) {
+          // Too much time passed, reset
           enterKeyTime = 0;
         }
         
