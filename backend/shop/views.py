@@ -59,7 +59,15 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not barcode_str:
             return None
         
+        # Convert to string and strip whitespace
         barcode = str(barcode_str).strip()
+        
+        # Remove all whitespace characters (spaces, tabs, newlines)
+        barcode = ''.join(barcode.split())
+        
+        # Remove common non-printable characters
+        import re
+        barcode = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', barcode)
         
         # If barcode is too long, try to extract valid barcode (handle duplication)
         if len(barcode) > 20:
@@ -146,16 +154,32 @@ class ProductViewSet(viewsets.ModelViewSet):
                 logger.error(f"Error in contains/startswith search: {e}")
         
         # Strategy 5: Try to normalize stored barcodes and match (for duplicated codes in DB)
-        # This is the most expensive but handles edge cases
+        # This handles cases where stored barcodes have spaces or special characters
         try:
             all_products = Product.objects.select_related("inventory").all()
             for product in all_products:
+                # Normalize stored barcode the same way we normalize the search
                 normalized_stored = self.normalize_barcode_for_search(product.barcode)
-                if normalized_stored == normalized_search:
-                    logger.info(f"Found product via stored barcode normalization: {product.name} (stored: {product.barcode} -> normalized: {normalized_stored})")
+                if normalized_stored and normalized_stored == normalized_search:
+                    logger.info(f"Found product via stored barcode normalization: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}')")
                     return Response(ProductSerializer(product).data)
         except Exception as e:
             logger.error(f"Error in stored barcode normalization search: {e}")
+        
+        # Strategy 6: Try removing all non-digit characters and matching (for alphanumeric codes)
+        try:
+            # Extract only digits from normalized search
+            digits_only_search = ''.join(filter(str.isdigit, normalized_search))
+            if digits_only_search and len(digits_only_search) >= 8:
+                all_products = Product.objects.select_related("inventory").all()
+                for product in all_products:
+                    # Extract only digits from stored barcode
+                    digits_only_stored = ''.join(filter(str.isdigit, str(product.barcode)))
+                    if digits_only_stored == digits_only_search:
+                        logger.info(f"Found product via digits-only match: {product.name} (stored: '{product.barcode}' -> digits: '{digits_only_stored}', search digits: '{digits_only_search}')")
+                        return Response(ProductSerializer(product).data)
+        except Exception as e:
+            logger.error(f"Error in digits-only search: {e}")
         
         logger.warning(f"Product not found for barcode: '{barcode}' (normalized: '{normalized_search}')")
         return Response({"detail": "NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)

@@ -40,8 +40,13 @@ class ProductCreateUpdateSerializer(serializers.ModelSerializer):
         if not value:
             raise serializers.ValidationError("Código de barras é obrigatório")
         
-        # Clean barcode
+        # Clean barcode - remove all whitespace
         value = str(value).strip()
+        value = ''.join(value.split())  # Remove all whitespace
+        
+        # Remove non-printable characters
+        import re
+        value = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', value)
         
         if not value:
             raise serializers.ValidationError("Código de barras não pode estar vazio")
