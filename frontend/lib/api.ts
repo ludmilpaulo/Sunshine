@@ -262,27 +262,21 @@ export const stockApi = {
 
 // Print
 // Helper function to get Print Bridge URL based on environment
-const getPrintBridgeUrl = (): string => {
+const getPrintBridgeUrl = (): string | null => {
+  // Always use environment variable if set
+  if (process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL) {
+    return process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL;
+  }
+  
   // Check if we're in production (Vercel)
   const isProduction = typeof window !== "undefined" && 
     (window.location.hostname.includes("vercel.app") || 
      window.location.hostname.includes("sunshinebar"));
   
-  // Use environment variable if set, otherwise detect automatically
-  if (process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL) {
-    return process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL;
-  }
-  
-  // Auto-detect: if in production, try to use same hostname with port 3333
-  if (isProduction && typeof window !== "undefined") {
-    // Try to use the same hostname but with port 3333
-    // This assumes Print Bridge is running on the same server
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-    // For Vercel, you might need to set a custom domain or use a separate server
-    // Default to localhost for now, but log a warning
-    console.warn("⚠️ Print Bridge URL not configured. Using default localhost. Please set NEXT_PUBLIC_PRINT_BRIDGE_URL in Vercel.");
-    return "http://localhost:3333";
+  // In production without URL configured, return null (printing will be skipped)
+  if (isProduction) {
+    console.warn("⚠️ Print Bridge URL not configured. Printing will be disabled. Set NEXT_PUBLIC_PRINT_BRIDGE_URL in Vercel environment variables.");
+    return null;
   }
   
   // Development: use localhost
@@ -292,6 +286,9 @@ const getPrintBridgeUrl = (): string => {
 export const printApi = {
   listPrinters: async () => {
     const printBridgeUrl = getPrintBridgeUrl();
+    if (!printBridgeUrl) {
+      throw new Error("Print Bridge URL não configurado. Configure NEXT_PUBLIC_PRINT_BRIDGE_URL.");
+    }
     const response = await fetch(`${printBridgeUrl}/printers`);
     if (!response.ok) {
       throw new Error("Failed to list printers");
@@ -308,6 +305,12 @@ export const printApi = {
     }
   ) => {
     const printBridgeUrl = getPrintBridgeUrl();
+    
+    // If Print Bridge URL is not configured, skip printing gracefully
+    if (!printBridgeUrl) {
+      console.warn("⚠️ Print Bridge não configurado. Impressão será ignorada.");
+      throw new Error("PRINT_BRIDGE_NOT_CONFIGURED");
+    }
     
     // Get printer config from env or use provided
     const lanIp = printerConfig?.lanIp || process.env.NEXT_PUBLIC_PRINTER_LAN_IP;
@@ -345,9 +348,9 @@ export const printApi = {
       return response.json();
     } catch (error: any) {
       // Check if it's a network error (Print Bridge not running)
-      if (error.message === "Failed to fetch" || error.name === "TypeError") {
+      if (error.message === "Failed to fetch" || error.name === "TypeError" || error.message?.includes("CORS")) {
         throw new Error(
-          "Print Bridge não está acessível. Verifique se o serviço está rodando em " + printBridgeUrl
+          `Print Bridge não está acessível em ${printBridgeUrl}. Verifique se o serviço está rodando e acessível.`
         );
       }
       throw error;

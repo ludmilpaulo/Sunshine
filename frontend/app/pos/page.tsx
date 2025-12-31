@@ -185,16 +185,30 @@ export default function POSPage() {
       // Try to print receipt (non-blocking)
       try {
         await printApi.printReceipt(result.receipt);
-        toast.success("Recibo impresso com sucesso");
+        toast.success("Recibo impresso com sucesso", { duration: 3000 });
       } catch (printError: any) {
         console.error("Print error:", printError);
         const errorMessage = printError?.message || "Erro desconhecido na impressão";
         
-        // Show a warning but don't block the sale
-        toast.error(
-          `Venda finalizada! Mas a impressão falhou: ${errorMessage}`,
-          { duration: 5000 }
-        );
+        // Handle different error types
+        if (errorMessage.includes("PRINT_BRIDGE_NOT_CONFIGURED") || 
+            errorMessage.includes("não está acessível") ||
+            errorMessage.includes("CORS")) {
+          // Print Bridge not configured or not accessible - show info message
+          toast(
+            "Venda finalizada! Impressão não disponível (Print Bridge não configurado).",
+            { 
+              icon: "ℹ️",
+              duration: 5000 
+            }
+          );
+        } else {
+          // Other printing errors - show warning but don't block the sale
+          toast.error(
+            `Venda finalizada! Mas a impressão falhou: ${errorMessage}`,
+            { duration: 5000 }
+          );
+        }
       }
 
       toast.success(`Venda ${result.saleNumber} finalizada com sucesso!`);

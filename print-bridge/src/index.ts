@@ -61,6 +61,10 @@ const allowedOrigins = [
   process.env.CORS_ORIGIN || "",
 ].filter(Boolean); // Remove empty strings
 
+// Support multiple CORS origins (comma-separated)
+const additionalOrigins = (process.env.CORS_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
+allowedOrigins.push(...additionalOrigins);
+
 app.use(cors({ 
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, Postman, etc.)
@@ -74,11 +78,15 @@ app.use(cors({
         callback(null, true);
       } else {
         console.warn(`⚠️  CORS blocked origin: ${origin}`);
+        console.warn(`   Allowed origins: ${allowedOrigins.join(", ")}`);
+        console.warn(`   Set CORS_ORIGIN_ALLOW_ALL=true to allow all origins (not recommended for production)`);
         callback(new Error("Not allowed by CORS"));
       }
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 app.use(express.json({ limit: "1mb" }));
 
