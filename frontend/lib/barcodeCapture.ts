@@ -175,6 +175,66 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
     handler(normalizedCode);
   };
 
+  // Separate function to process Enter key after delay
+  const processEnterKey = (e: KeyboardEvent) => {
+    const code = cleanBarcode(buffer);
+    const processTime = Date.now();
+    
+    if (DEBUG) {
+      console.log("[Barcode] Processing Enter - Buffer:", buffer, "Cleaned:", code, "Length:", code.length);
+    }
+    
+    // Validate code length
+    if (code.length < MIN_LENGTH) {
+      buffer = "";
+      isScanning = false;
+      if (DEBUG) {
+        console.log("[Barcode] Code too short, ignoring. Code:", code, "Length:", code.length);
+      }
+      return;
+    }
+    
+    if (code.length > MAX_LENGTH) {
+      // Code is too long - might be duplicated or corrupted
+      // Try to extract valid barcode from it
+      const possibleCodes = extractValidBarcodes(code);
+      if (possibleCodes.length > 0) {
+        const validCode = possibleCodes[0]; // Use first valid code
+        if (DEBUG) {
+          console.log("[Barcode] Code too long, extracted valid code:", validCode, "from:", code);
+        }
+        processBarcode(validCode, e);
+      } else {
+        if (DEBUG) {
+          console.log("[Barcode] Code too long and no valid barcode found:", code);
+        }
+        buffer = "";
+        isScanning = false;
+      }
+      return;
+    }
+    
+    // Check for duplicate scans (same code within threshold time)
+    if (code === lastScannedCode && (processTime - lastScannedTime) < DUPLICATE_THRESHOLD) {
+      if (DEBUG) {
+        console.log("[Barcode] Duplicate scan detected, ignoring:", code);
+      }
+      buffer = "";
+      isScanning = false;
+      return;
+    }
+    
+    if (isScanning || code.length >= MIN_LENGTH) {
+      processBarcode(code, e);
+    } else {
+      buffer = "";
+      isScanning = false;
+      if (DEBUG) {
+        console.log("[Barcode] Not from scanner, letting event proceed");
+      }
+    }
+  };
+
   const onKeyDown = (e: KeyboardEvent) => {
     const now = Date.now();
     const timeSinceLastKey = now - lastTime;
@@ -242,66 +302,6 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
       
       return;
     }
-    
-    // Separate function to process Enter key after delay
-    const processEnterKey = (e: KeyboardEvent) => {
-      const code = cleanBarcode(buffer);
-      const processTime = Date.now();
-      
-      if (DEBUG) {
-        console.log("[Barcode] Processing Enter - Buffer:", buffer, "Cleaned:", code, "Length:", code.length);
-      }
-      
-      // Validate code length
-      if (code.length < MIN_LENGTH) {
-        buffer = "";
-        isScanning = false;
-        if (DEBUG) {
-          console.log("[Barcode] Code too short, ignoring. Code:", code, "Length:", code.length);
-        }
-        return;
-      }
-      
-      if (code.length > MAX_LENGTH) {
-        // Code is too long - might be duplicated or corrupted
-        // Try to extract valid barcode from it
-        const possibleCodes = extractValidBarcodes(code);
-        if (possibleCodes.length > 0) {
-          const validCode = possibleCodes[0]; // Use first valid code
-          if (DEBUG) {
-            console.log("[Barcode] Code too long, extracted valid code:", validCode, "from:", code);
-          }
-          processBarcode(validCode, e);
-        } else {
-          if (DEBUG) {
-            console.log("[Barcode] Code too long and no valid barcode found:", code);
-          }
-          buffer = "";
-          isScanning = false;
-        }
-        return;
-      }
-      
-      // Check for duplicate scans (same code within threshold time)
-      if (code === lastScannedCode && (processTime - lastScannedTime) < DUPLICATE_THRESHOLD) {
-        if (DEBUG) {
-          console.log("[Barcode] Duplicate scan detected, ignoring:", code);
-        }
-        buffer = "";
-        isScanning = false;
-        return;
-      }
-      
-      if (isScanning || code.length >= MIN_LENGTH) {
-        processBarcode(code, e);
-      } else {
-        buffer = "";
-        isScanning = false;
-        if (DEBUG) {
-          console.log("[Barcode] Not from scanner, letting event proceed");
-        }
-      }
-    };
 
     // Ignore modifier keys
     if (e.ctrlKey || e.metaKey || e.altKey) {
