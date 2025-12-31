@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "./Sidebar";
 import { authApi } from "@/lib/api";
@@ -15,8 +15,58 @@ export default function DashboardLayout({ children, requiredRole }: DashboardLay
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const hasCheckedRefresh = useRef(false);
 
   useEffect(() => {
+    // Detect page refresh on mount
+    const detectRefresh = () => {
+      if (hasCheckedRefresh.current) return;
+      hasCheckedRefresh.current = true;
+
+      if (typeof window !== "undefined") {
+        try {
+          // Check navigation type to detect refresh
+          const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
+          
+          // If it's a reload/refresh (not initial navigation), clear everything
+          if (navigation && (navigation.type === "reload" || navigation.type === "back_forward")) {
+            // Clear all storage and cache
+            authApi.logout();
+            
+            // Clear browser cache
+            if ("caches" in window) {
+              caches.keys().then((names) => {
+                names.forEach((name) => {
+                  caches.delete(name);
+                });
+              });
+            }
+            
+            // Force redirect to login
+            window.location.href = "/login";
+            return;
+          }
+        } catch (e) {
+          // Fallback: check if page was refreshed using sessionStorage
+          const wasRefreshed = sessionStorage.getItem("page_refreshed");
+          if (wasRefreshed === "true") {
+            sessionStorage.removeItem("page_refreshed");
+            authApi.logout();
+            window.location.href = "/login";
+            return;
+          }
+        }
+      }
+    };
+
+    // Set flag before page unload
+    const handleBeforeUnload = () => {
+      sessionStorage.setItem("page_refreshed", "true");
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    detectRefresh();
+
     const checkAuth = async () => {
       const token = localStorage.getItem("access_token");
       if (!token) {
@@ -47,6 +97,10 @@ export default function DashboardLayout({ children, requiredRole }: DashboardLay
     };
 
     checkAuth();
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
   }, [router, requiredRole]);
 
   if (loading) {

@@ -159,8 +159,18 @@ export const authApi = {
     return { access, refresh };
   },
   logout: () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    // Clear all storage
+    localStorage.clear();
+    sessionStorage.clear();
+    
+    // Clear any cached data
+    if (typeof window !== "undefined" && "caches" in window) {
+      caches.keys().then((names) => {
+        names.forEach((name) => {
+          caches.delete(name);
+        });
+      });
+    }
   },
   getMe: async () => {
     const response = await api.get("/auth/me/");
