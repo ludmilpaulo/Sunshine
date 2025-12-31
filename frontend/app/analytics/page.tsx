@@ -87,27 +87,27 @@ export default function AnalyticsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-4 sm:space-y-6 lg:space-y-8 animate-fade-in">
         {/* Header */}
         <div className="animate-slide-up">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-              <BarChart3 className="w-7 h-7 text-white" />
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent flex items-center gap-2 sm:gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
+              <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-white" />
             </div>
-            Analytics de Vendas
+            <span className="text-xl sm:text-2xl lg:text-4xl">Analytics de Vendas</span>
           </h1>
-          <p className="text-slate-600 mt-2 text-lg">Análise detalhada de vendas por funcionário</p>
+          <p className="text-slate-600 mt-2 text-sm sm:text-base lg:text-lg">Análise detalhada de vendas por funcionário</p>
         </div>
 
         {/* Filters */}
         <div className="card animate-slide-up">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-              <Filter className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center">
+              <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">Filtros</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Filtros</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Período</label>
               <select
@@ -173,38 +173,38 @@ export default function AnalyticsPage() {
 
         {/* Summary Cards */}
         {salesData && salesDataWithTax && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-slide-up">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 animate-slide-up">
             <div className="card-gradient from-blue-500 via-blue-600 to-indigo-600 group">
               <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-blue-100/90 text-sm font-semibold uppercase tracking-wide mb-2">Receita Total</p>
-                  <p className="text-4xl font-bold text-white drop-shadow-lg mb-1">
+                <div className="flex-1 min-w-0">
+                  <p className="text-blue-100/90 text-xs sm:text-sm font-semibold uppercase tracking-wide mb-2">Receita Total</p>
+                  <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white drop-shadow-lg mb-1 truncate">
                     {formatCurrency(salesData.summary.total_revenue)}
                   </p>
                 </div>
-                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 shadow-lg">
-                  <TrendingUp className="w-8 h-8 text-white" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white/20 backdrop-blur-sm rounded-xl lg:rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 shadow-lg flex-shrink-0">
+                  <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-white" />
                 </div>
               </div>
             </div>
             <div className="card-gradient from-emerald-500 via-green-600 to-teal-600 group">
               <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-emerald-100/90 text-sm font-semibold uppercase tracking-wide mb-2">Subtotal</p>
-                  <p className="text-4xl font-bold text-white drop-shadow-lg mb-1">
+                <div className="flex-1 min-w-0">
+                  <p className="text-emerald-100/90 text-xs sm:text-sm font-semibold uppercase tracking-wide mb-2">Subtotal</p>
+                  <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white drop-shadow-lg mb-1 truncate">
                     {formatCurrency(salesDataWithTax.summary.total_subtotal)}
                   </p>
                 </div>
-                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 shadow-lg">
-                  <Receipt className="w-8 h-8 text-white" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white/20 backdrop-blur-sm rounded-xl lg:rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 shadow-lg flex-shrink-0">
+                  <Receipt className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-white" />
                 </div>
               </div>
             </div>
             <div className="card-gradient from-red-500 via-rose-600 to-pink-600 group">
               <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-red-100/90 text-sm font-semibold uppercase tracking-wide mb-2">Imposto Total</p>
-                  <p className="text-4xl font-bold text-white drop-shadow-lg mb-1">
+                <div className="flex-1 min-w-0">
+                  <p className="text-red-100/90 text-xs sm:text-sm font-semibold uppercase tracking-wide mb-2">Imposto Total</p>
+                  <p className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white drop-shadow-lg mb-1 truncate">
                     {formatCurrency(salesDataWithTax.summary.total_tax)}
                   </p>
                   <p className="text-red-100/90 text-xs font-semibold mt-1">

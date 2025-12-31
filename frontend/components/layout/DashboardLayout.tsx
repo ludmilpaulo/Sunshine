@@ -67,7 +67,7 @@ export default function DashboardLayout({ children, requiredRole }: DashboardLay
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50">
       <Sidebar userRole={user.role} userName={user.full_name} />
-      <main className="flex-1 ml-64 p-8 animate-fade-in">
+      <main className="flex-1 lg:ml-64 ml-0 p-4 sm:p-6 lg:p-8 animate-fade-in w-full">
         {children}
       </main>
     </div>

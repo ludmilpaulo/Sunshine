@@ -155,21 +155,21 @@ export default function POSPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex justify-between items-center animate-slide-up">
+      <div className="space-y-4 sm:space-y-6 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 animate-slide-up">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
               Ponto de Venda
             </h1>
-            <p className="text-slate-600 mt-2 text-lg">Escaneie produtos para adicionar ao carrinho</p>
+            <p className="text-slate-600 mt-2 text-sm sm:text-base lg:text-lg">Escaneie produtos para adicionar ao carrinho</p>
           </div>
           {userOperationType === "BOTH" && (
-            <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl shadow-md border border-slate-200">
-              <label className="text-sm font-semibold text-slate-700">Operação:</label>
+            <div className="flex items-center gap-2 sm:gap-3 bg-white px-3 sm:px-4 py-2 rounded-xl shadow-md border border-slate-200">
+              <label className="text-xs sm:text-sm font-semibold text-slate-700">Operação:</label>
               <select
                 value={selectedOperationType}
                 onChange={(e) => setSelectedOperationType(e.target.value as "SALON" | "STUDIO")}
-                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-semibold bg-white"
+                className="px-3 sm:px-4 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-semibold bg-white"
               >
                 <option value="SALON">Salon</option>
                 <option value="STUDIO">Studio</option>
@@ -178,16 +178,16 @@ export default function POSPage() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 animate-slide-up">
           {/* Cart */}
           <div className="lg:col-span-2 space-y-4">
             <div className="card group">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <ShoppingCart className="w-5 h-5 text-white" />
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2 sm:gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
+                    <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
-                  Carrinho de Compras
+                  <span className="text-lg sm:text-xl lg:text-2xl">Carrinho de Compras</span>
                 </h2>
                 {items.length > 0 && (
                   <button
@@ -217,43 +217,43 @@ export default function POSPage() {
                   {items.map((item, index) => (
                     <div
                       key={item.product.id}
-                      className="flex items-center justify-between p-5 bg-gradient-to-r from-white to-slate-50 rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-300 animate-fade-in"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 sm:p-5 bg-gradient-to-r from-white to-slate-50 rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-300 animate-fade-in gap-3"
                       style={{ animationDelay: `${index * 0.05}s` }}
                     >
-                      <div className="flex-1">
-                        <p className="font-bold text-lg text-slate-900 mb-1">{item.product.name}</p>
-                        <p className="text-sm text-slate-600 font-medium">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-base sm:text-lg text-slate-900 mb-1 truncate">{item.product.name}</p>
+                        <p className="text-xs sm:text-sm text-slate-600 font-medium">
                           {formatCurrency(parseFloat(item.unit_price))} cada
                         </p>
                       </div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4">
                         <div className="flex items-center gap-1 bg-white rounded-xl border-2 border-slate-200 shadow-sm">
                           <button
                             onClick={() => updateQty(item.product.id, item.qty - 1)}
-                            className="p-2.5 hover:bg-slate-100 rounded-l-xl transition-all duration-200 active:scale-95"
+                            className="p-2 sm:p-2.5 hover:bg-slate-100 rounded-l-xl transition-all duration-200 active:scale-95"
                           >
-                            <Minus className="w-4 h-4 text-slate-700" />
+                            <Minus className="w-3 h-3 sm:w-4 sm:h-4 text-slate-700" />
                           </button>
-                          <span className="px-5 py-2.5 font-bold text-slate-900 min-w-[3.5rem] text-center text-lg">
+                          <span className="px-3 sm:px-5 py-2 sm:py-2.5 font-bold text-slate-900 min-w-[2.5rem] sm:min-w-[3.5rem] text-center text-base sm:text-lg">
                             {item.qty}
                           </span>
                           <button
                             onClick={() => updateQty(item.product.id, item.qty + 1)}
-                            className="p-2.5 hover:bg-slate-100 rounded-r-xl transition-all duration-200 active:scale-95"
+                            className="p-2 sm:p-2.5 hover:bg-slate-100 rounded-r-xl transition-all duration-200 active:scale-95"
                           >
-                            <Plus className="w-4 h-4 text-slate-700" />
+                            <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-slate-700" />
                           </button>
                         </div>
-                        <div className="text-right min-w-[6rem]">
-                          <p className="font-bold text-xl text-blue-600">
+                        <div className="text-right min-w-[5rem] sm:min-w-[6rem]">
+                          <p className="font-bold text-lg sm:text-xl text-blue-600">
                             {formatCurrency(parseFloat(item.unit_price) * item.qty)}
                           </p>
                         </div>
                         <button
                           onClick={() => removeItem(item.product.id)}
-                          className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 active:scale-95"
+                          className="p-2 sm:p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 active:scale-95"
                         >
-                          <Trash2 className="w-5 h-5" />
+                          <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                         </button>
                       </div>
                     </div>
@@ -266,25 +266,25 @@ export default function POSPage() {
           {/* Totals & Checkout */}
           <div className="space-y-4">
             <div className="card-gradient from-blue-500 via-blue-600 to-indigo-600 group">
-              <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                  <Receipt className="w-5 h-5" />
+              <h2 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6 flex items-center gap-2">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                  <Receipt className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 Resumo do Pedido
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="flex justify-between items-center py-2 border-b border-white/20">
-                  <span className="text-blue-100 font-medium">Subtotal:</span>
-                  <span className="font-bold text-lg text-white">{formatCurrency(getSubtotal())}</span>
+                  <span className="text-blue-100 font-medium text-sm sm:text-base">Subtotal:</span>
+                  <span className="font-bold text-base sm:text-lg text-white">{formatCurrency(getSubtotal())}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-white/20">
-                  <span className="text-blue-100 font-medium">Imposto:</span>
-                  <span className="font-bold text-lg text-white">{formatCurrency(getTax())}</span>
+                  <span className="text-blue-100 font-medium text-sm sm:text-base">Imposto:</span>
+                  <span className="font-bold text-base sm:text-lg text-white">{formatCurrency(getTax())}</span>
                 </div>
-                <div className="pt-4 mt-4 border-t-2 border-white/30">
+                <div className="pt-3 sm:pt-4 mt-3 sm:mt-4 border-t-2 border-white/30">
                   <div className="flex justify-between items-center">
-                    <span className="text-xl font-bold text-white">Total:</span>
-                    <span className="text-3xl font-extrabold text-white drop-shadow-lg">
+                    <span className="text-lg sm:text-xl font-bold text-white">Total:</span>
+                    <span className="text-2xl sm:text-3xl font-extrabold text-white drop-shadow-lg">
                       {formatCurrency(getTotal())}
                     </span>
                   </div>
@@ -295,7 +295,7 @@ export default function POSPage() {
             <button
               onClick={handleCheckout}
               disabled={items.length === 0 || checkoutLoading}
-              className="w-full btn-primary py-5 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 shadow-2xl"
+              className="w-full btn-primary py-4 sm:py-5 text-base sm:text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2 sm:gap-3 shadow-2xl"
             >
               {checkoutLoading ? (
                 <>
@@ -315,20 +315,20 @@ export default function POSPage() {
 
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-slide-up border border-slate-200">
-            <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-8 animate-slide-up border border-slate-200">
+            <div className="p-4 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
+              <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 Pagamento
               </h2>
-              <p className="text-slate-600 mt-1 text-sm">Selecione o método de pagamento</p>
+              <p className="text-slate-600 mt-1 text-xs sm:text-sm">Selecione o método de pagamento</p>
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-2 sm:mb-3 uppercase tracking-wide">
                   Método de Pagamento
                 </label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   {(["CASH", "CARD", "TRANSFER"] as const).map((method) => {
                     const isSelected = paymentMethod === method;
                     return (
@@ -336,20 +336,20 @@ export default function POSPage() {
                         key={method}
                         type="button"
                         onClick={() => setPaymentMethod(method)}
-                        className={`p-5 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
+                        className={`p-3 sm:p-5 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
                           isSelected
                             ? "border-blue-600 bg-gradient-to-br from-blue-50 to-blue-100 shadow-lg scale-105"
                             : "border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50"
                         }`}
                       >
-                        <div className={`w-12 h-12 mx-auto mb-3 rounded-xl flex items-center justify-center ${
+                        <div className={`w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 rounded-lg sm:rounded-xl flex items-center justify-center ${
                           isSelected ? "bg-blue-600" : "bg-slate-100"
                         } transition-colors`}>
-                          {method === "CASH" && <DollarSign className={`w-6 h-6 ${isSelected ? "text-white" : "text-slate-600"}`} />}
-                          {method === "CARD" && <CreditCard className={`w-6 h-6 ${isSelected ? "text-white" : "text-slate-600"}`} />}
-                          {method === "TRANSFER" && <Receipt className={`w-6 h-6 ${isSelected ? "text-white" : "text-slate-600"}`} />}
+                          {method === "CASH" && <DollarSign className={`w-4 h-4 sm:w-6 sm:h-6 ${isSelected ? "text-white" : "text-slate-600"}`} />}
+                          {method === "CARD" && <CreditCard className={`w-4 h-4 sm:w-6 sm:h-6 ${isSelected ? "text-white" : "text-slate-600"}`} />}
+                          {method === "TRANSFER" && <Receipt className={`w-4 h-4 sm:w-6 sm:h-6 ${isSelected ? "text-white" : "text-slate-600"}`} />}
                         </div>
-                        <p className={`text-sm font-bold ${isSelected ? "text-blue-700" : "text-slate-700"}`}>
+                        <p className={`text-xs sm:text-sm font-bold ${isSelected ? "text-blue-700" : "text-slate-700"}`}>
                           {method === "CASH" ? "Dinheiro" : method === "CARD" ? "Cartão" : "Transferência"}
                         </p>
                       </button>
@@ -358,7 +358,7 @@ export default function POSPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">
                   Valor Recebido
                 </label>
                 <input
@@ -366,34 +366,34 @@ export default function POSPage() {
                   step="0.01"
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="input-field text-2xl font-bold text-center"
+                  className="input-field text-xl sm:text-2xl font-bold text-center"
                   autoFocus
                   placeholder="0.00"
                 />
               </div>
               {parseFloat(paymentAmount) > getTotal() && (
-                <div className="p-5 bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl animate-fade-in">
-                  <p className="text-sm text-emerald-800 font-semibold uppercase tracking-wide mb-1">Troco:</p>
-                  <p className="text-3xl font-extrabold text-emerald-600">
+                <div className="p-4 sm:p-5 bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl animate-fade-in">
+                  <p className="text-xs sm:text-sm text-emerald-800 font-semibold uppercase tracking-wide mb-1">Troco:</p>
+                  <p className="text-2xl sm:text-3xl font-extrabold text-emerald-600">
                     {formatCurrency(parseFloat(paymentAmount) - getTotal())}
                   </p>
                 </div>
               )}
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   onClick={() => setShowPaymentModal(false)}
-                  className="flex-1 btn-secondary py-4"
+                  className="flex-1 btn-secondary py-3 sm:py-4 text-sm sm:text-base"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleProcessPayment}
                   disabled={checkoutLoading || parseFloat(paymentAmount) < getTotal()}
-                  className="flex-1 btn-primary py-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 btn-primary py-3 sm:py-4 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {checkoutLoading ? (
                     <span className="flex items-center justify-center gap-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       Processando...
                     </span>
                   ) : (

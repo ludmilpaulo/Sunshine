@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -13,6 +14,8 @@ import {
   User,
   QrCode,
   Printer,
+  Menu,
+  X,
 } from "lucide-react";
 import { authApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
@@ -51,6 +54,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const items = menuItems[userRole];
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const handleLogout = () => {
     authApi.logout();
@@ -59,7 +63,28 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
   };
 
   return (
-    <div className="h-screen w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col fixed left-0 top-0 shadow-2xl border-r border-slate-700/50">
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileOpen(!isMobileOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-slate-900 text-white rounded-lg shadow-lg hover:bg-slate-800 transition-colors"
+        aria-label="Toggle menu"
+      >
+        {isMobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+      </button>
+
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={`h-screen w-64 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col fixed left-0 top-0 shadow-2xl border-r border-slate-700/50 z-40 transition-transform duration-300 ${
+        isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      }`}>
       <div className="p-6 border-b border-slate-700/50 bg-gradient-to-r from-slate-800/50 to-slate-900/50 backdrop-blur-sm">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -82,6 +107,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setIsMobileOpen(false)}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${
                 isActive
                   ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/50 transform scale-105"
@@ -116,6 +142,7 @@ export default function Sidebar({ userRole, userName }: SidebarProps) {
         </button>
       </div>
     </div>
+    </>
   );
 }
 

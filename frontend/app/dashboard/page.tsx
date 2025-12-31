@@ -76,35 +76,35 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div className="space-y-8 animate-fade-in">
         <div className="animate-slide-up">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
             Painel de Controle
           </h1>
-          <p className="text-slate-600 mt-2 text-lg">Bem-vindo de volta! Aqui está o que está acontecendo hoje.</p>
+          <p className="text-slate-600 mt-2 text-sm sm:text-base lg:text-lg">Bem-vindo de volta! Aqui está o que está acontecendo hoje.</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 animate-slide-up">
           <div className="card-gradient from-blue-500 via-blue-600 to-blue-700 group">
             <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-blue-100/90 text-sm font-semibold uppercase tracking-wide mb-2">Receita de Hoje</p>
-                <p className="text-4xl font-bold mb-1 drop-shadow-lg">{formatCurrency(stats.sales.today_revenue)}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-blue-100/90 text-xs sm:text-sm font-semibold uppercase tracking-wide mb-2">Receita de Hoje</p>
+                <p className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg truncate">{formatCurrency(stats.sales.today_revenue)}</p>
                 <div className="flex items-center gap-2 mt-2">
                   <div className="w-2 h-2 bg-blue-200 rounded-full animate-pulse"></div>
                   <p className="text-blue-100/90 text-sm font-medium">{stats.sales.today_count} vendas realizadas</p>
                 </div>
               </div>
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110 shadow-lg">
-                <DollarSign className="w-8 h-8" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white/20 backdrop-blur-sm rounded-xl lg:rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110 shadow-lg flex-shrink-0">
+                <DollarSign className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8" />
               </div>
             </div>
           </div>
 
           <div className="card-gradient from-emerald-500 via-emerald-600 to-green-600 group">
             <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-emerald-100/90 text-sm font-semibold uppercase tracking-wide mb-2">Receita do Mês</p>
-                <p className="text-4xl font-bold mb-1 drop-shadow-lg">{formatCurrency(stats.sales.month_revenue)}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-emerald-100/90 text-xs sm:text-sm font-semibold uppercase tracking-wide mb-2">Receita do Mês</p>
+                <p className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg truncate">{formatCurrency(stats.sales.month_revenue)}</p>
                 <div className="flex items-center gap-2 mt-2">
                   {isPositiveGrowth ? (
                     <>
@@ -123,54 +123,54 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110 shadow-lg">
-                <TrendingUp className="w-8 h-8" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white/20 backdrop-blur-sm rounded-xl lg:rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110 shadow-lg flex-shrink-0">
+                <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8" />
               </div>
             </div>
           </div>
 
           <div className="card-gradient from-violet-500 via-purple-600 to-indigo-600 group">
             <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-purple-100/90 text-sm font-semibold uppercase tracking-wide mb-2">Total de Produtos</p>
-                <p className="text-4xl font-bold mb-1 drop-shadow-lg">{stats.products.total}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-purple-100/90 text-xs sm:text-sm font-semibold uppercase tracking-wide mb-2">Total de Produtos</p>
+                <p className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg">{stats.products.total}</p>
                 <div className="flex items-center gap-2 mt-2">
                   <div className="w-2 h-2 bg-purple-200 rounded-full"></div>
                   <p className="text-purple-100/90 text-sm font-medium">{stats.products.active} produtos ativos</p>
                 </div>
               </div>
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110 shadow-lg">
-                <Package className="w-8 h-8" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white/20 backdrop-blur-sm rounded-xl lg:rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110 shadow-lg flex-shrink-0">
+                <Package className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8" />
               </div>
             </div>
           </div>
 
           <div className="card-gradient from-amber-500 via-orange-500 to-orange-600 group">
             <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-orange-100/90 text-sm font-semibold uppercase tracking-wide mb-2">Estoque Baixo</p>
-                <p className="text-4xl font-bold mb-1 drop-shadow-lg">{stats.products.low_stock}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-orange-100/90 text-xs sm:text-sm font-semibold uppercase tracking-wide mb-2">Estoque Baixo</p>
+                <p className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 drop-shadow-lg">{stats.products.low_stock}</p>
                 <div className="flex items-center gap-2 mt-2">
                   <div className="w-2 h-2 bg-orange-200 rounded-full animate-pulse"></div>
                   <p className="text-orange-100/90 text-sm font-medium">Precisam de reposição</p>
                 </div>
               </div>
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110 shadow-lg">
-                <ShoppingBag className="w-8 h-8" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-white/20 backdrop-blur-sm rounded-xl lg:rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:scale-110 shadow-lg flex-shrink-0">
+                <ShoppingBag className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 animate-slide-up">
           <div className="card group">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-slate-900">Tendência de Vendas</h2>
-              <span className="text-sm text-slate-500 font-medium">Últimos 30 Dias</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Tendência de Vendas</h2>
+              <span className="text-xs sm:text-sm text-slate-500 font-medium">Últimos 30 Dias</span>
             </div>
             {chartData && (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <LineChart data={chartData.labels.map((label: string, i: number) => ({
                   date: format(new Date(label), "MMM dd"),
                   revenue: chartData.revenue[i],
@@ -207,12 +207,12 @@ export default function DashboardPage() {
           </div>
 
           <div className="card group">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-slate-900">Produtos Mais Vendidos</h2>
-              <span className="text-sm text-slate-500 font-medium">Top 5</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Produtos Mais Vendidos</h2>
+              <span className="text-xs sm:text-sm text-slate-500 font-medium">Top 5</span>
             </div>
             {topProducts.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <BarChart data={topProducts.slice(0, 5)}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="product_name" stroke="#64748b" angle={-45} textAnchor="end" height={80} />
@@ -237,39 +237,43 @@ export default function DashboardPage() {
 
         {/* Recent Sales */}
         <div className="card animate-slide-up">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-slate-900">Vendas Recentes</h2>
-            <span className="text-sm text-slate-500 font-medium">Últimas transações</span>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-2">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">Vendas Recentes</h2>
+            <span className="text-xs sm:text-sm text-slate-500 font-medium">Últimas transações</span>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-slate-200">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-slate-50 to-slate-100/50">
-                <tr>
-                  <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Venda #</th>
-                  <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Caixa</th>
-                  <th className="text-right py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Valor</th>
-                  <th className="text-right py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Data</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {stats.recent_sales.map((sale, index) => (
-                  <tr key={sale.id} className="table-row animate-fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
-                    <td className="py-4 px-6">
-                      <span className="font-bold text-slate-900">{sale.number}</span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="text-slate-700 font-medium">{sale.cashier}</span>
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <span className="font-bold text-lg text-blue-600">{formatCurrency(sale.total)}</span>
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <span className="text-slate-600 text-sm">{format(new Date(sale.created_at), "MMM dd, yyyy HH:mm")}</span>
-                    </td>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 -mx-4 sm:mx-0">
+            <div className="inline-block min-w-full align-middle">
+              <table className="w-full">
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100/50">
+                  <tr>
+                    <th className="text-left py-3 px-3 sm:py-4 sm:px-6 text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider">Venda #</th>
+                    <th className="text-left py-3 px-3 sm:py-4 sm:px-6 text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider hidden sm:table-cell">Caixa</th>
+                    <th className="text-right py-3 px-3 sm:py-4 sm:px-6 text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider">Valor</th>
+                    <th className="text-right py-3 px-3 sm:py-4 sm:px-6 text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider hidden md:table-cell">Data</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {stats.recent_sales.map((sale, index) => (
+                    <tr key={sale.id} className="table-row animate-fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
+                      <td className="py-3 px-3 sm:py-4 sm:px-6">
+                        <span className="font-bold text-sm sm:text-base text-slate-900">{sale.number}</span>
+                        <p className="text-xs text-slate-500 sm:hidden mt-1">{sale.cashier}</p>
+                      </td>
+                      <td className="py-3 px-3 sm:py-4 sm:px-6 hidden sm:table-cell">
+                        <span className="text-slate-700 font-medium text-sm">{sale.cashier}</span>
+                      </td>
+                      <td className="py-3 px-3 sm:py-4 sm:px-6 text-right">
+                        <span className="font-bold text-base sm:text-lg text-blue-600">{formatCurrency(sale.total)}</span>
+                        <p className="text-xs text-slate-500 md:hidden mt-1">{format(new Date(sale.created_at), "MMM dd, HH:mm")}</p>
+                      </td>
+                      <td className="py-3 px-3 sm:py-4 sm:px-6 text-right hidden md:table-cell">
+                        <span className="text-slate-600 text-xs sm:text-sm">{format(new Date(sale.created_at), "MMM dd, yyyy HH:mm")}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
