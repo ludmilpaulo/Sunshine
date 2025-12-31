@@ -67,5 +67,16 @@ Após criar o produto, teste escaneando o código `745760805778` (ou `7457608057
 
 ## Nota Importante
 
-Se o código de barras escaneado for diferente (por exemplo, `745760805778` com 12 dígitos), você pode criar o produto com ambos os códigos ou ajustar o código no banco de dados para corresponder ao que o scanner está lendo.
+O código de barras correto do produto é **`745760805778`** (12 dígitos). O comando `create_azzur_product` cria o produto com este código principal e também cria um produto com o código `74576080578` (11 dígitos) como fallback, caso o scanner leia incorretamente.
+
+## Testando a Busca
+
+Após criar o produto, você pode testar a busca localmente (se tiver o banco de dados local configurado):
+
+```bash
+cd ~/Sunshine/backend
+python manage.py shell < test_barcode_search.py
+```
+
+Isso mostrará todas as estratégias de busca e se o produto é encontrado com diferentes códigos.
 
