@@ -217,6 +217,27 @@ class ProductViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error in substring search: {e}")
         
+        # Strategy 8: Try to find products where stored barcode appears in scanned code
+        # This handles cases where scanner might be adding extra digits or the stored code is shorter
+        try:
+            if len(normalized_search) >= 8:
+                all_products = Product.objects.select_related("inventory").all()
+                for product in all_products:
+                    # Normalize stored barcode
+                    normalized_stored = normalize_barcode_for_search(product.barcode)
+                    if normalized_stored and len(normalized_stored) >= 8:
+                        # Check if stored barcode appears in scanned code
+                        if normalized_stored in normalized_search:
+                            stored_len = len(normalized_stored)
+                            search_len = len(normalized_search)
+                            
+                            # If scanned code contains stored code and lengths are similar (within 3 digits)
+                            if abs(stored_len - search_len) <= 3:
+                                logger.info(f"Found product via reverse substring match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
+                                return Response(ProductSerializer(product).data)
+        except Exception as e:
+            logger.error(f"Error in reverse substring search: {e}")
+        
         # Log all attempted searches for debugging
         logger.warning(f"Product not found for barcode: '{barcode}' (normalized: '{normalized_search}')")
         logger.info(f"Search strategies attempted: exact match, original code, case-insensitive, contains, startswith, stored normalization, digits-only, substring")
