@@ -51,7 +51,13 @@ export default function POSPage() {
         console.error("❌ Error fetching product:", error);
         console.error("Error response:", error.response?.data);
         if (error.response?.status === 404) {
-          toast.error(`Produto não encontrado: ${barcode}`);
+          const errorData = error.response?.data;
+          const message = errorData?.message || `Produto não encontrado com código: ${barcode}`;
+          toast.error(message, {
+            duration: 5000,
+            icon: "⚠️",
+          });
+          console.warn(`Produto não encontrado. Código escaneado: "${barcode}". Verifique se o produto está cadastrado no sistema.`);
         } else {
           toast.error(`Falha ao buscar produto: ${error.message || "Erro desconhecido"}`);
         }

@@ -188,8 +188,46 @@ class ProductViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error in digits-only search: {e}")
         
+        # Strategy 7: Try to find if the scanned code appears within any stored barcode
+        # This handles cases where stored barcodes are duplicated or contain the scanned code
+        try:
+            if len(normalized_search) >= 8:
+                all_products = Product.objects.select_related("inventory").all()
+                for product in all_products:
+                    # Normalize stored barcode
+                    normalized_stored = normalize_barcode_for_search(product.barcode)
+                    if normalized_stored:
+                        # Check if scanned code appears in stored barcode
+                        if normalized_search in normalized_stored:
+                            # Verify it's a meaningful match (not just a substring by chance)
+                            # Check if it's at the start, end, or if stored barcode is duplicated
+                            stored_len = len(normalized_stored)
+                            search_len = len(normalized_search)
+                            
+                            # If stored is much longer, it might be duplicated
+                            if stored_len >= search_len * 2:
+                                # Check if stored barcode contains the search code as a repeating pattern
+                                if normalized_stored.startswith(normalized_search) or normalized_stored.endswith(normalized_search):
+                                    logger.info(f"Found product via substring match in duplicated barcode: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
+                                    return Response(ProductSerializer(product).data)
+                            # If stored barcode contains the search code and lengths are similar
+                            elif abs(stored_len - search_len) <= 2:
+                                logger.info(f"Found product via substring match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
+                                return Response(ProductSerializer(product).data)
+        except Exception as e:
+            logger.error(f"Error in substring search: {e}")
+        
+        # Log all attempted searches for debugging
         logger.warning(f"Product not found for barcode: '{barcode}' (normalized: '{normalized_search}')")
-        return Response({"detail": "NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        logger.info(f"Search strategies attempted: exact match, original code, case-insensitive, contains, startswith, stored normalization, digits-only, substring")
+        
+        # Return a more helpful error message
+        return Response({
+            "detail": "NOT_FOUND",
+            "barcode": barcode,
+            "normalized": normalized_search,
+            "message": f"Produto não encontrado com código de barras '{barcode}'. Verifique se o produto está cadastrado no sistema."
+        }, status=status.HTTP_404_NOT_FOUND)
 
     def perform_create(self, serializer):
         # Get initial stock from validated data
