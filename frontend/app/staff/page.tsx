@@ -21,6 +21,7 @@ export default function StaffPage() {
     last_name: "",
     password: "",
     role: "staff" as "admin" | "manager" | "staff",
+    operation_type: "SALON" as "SALON" | "STUDIO" | "BOTH",
     is_active: true,
   });
 
@@ -65,6 +66,7 @@ export default function StaffPage() {
         last_name: "",
         password: "",
         role: "staff",
+        operation_type: "SALON",
         is_active: true,
       });
       loadUsers();
@@ -97,11 +99,13 @@ export default function StaffPage() {
 
   return (
     <DashboardLayout requiredRole="admin">
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex justify-between items-center animate-slide-up">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Gerenciamento de Funcionários</h1>
-            <p className="text-slate-600 mt-1">Gerencie funcionários, gerentes e administradores</p>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
+              Gerenciamento de Funcionários
+            </h1>
+            <p className="text-slate-600 mt-2 text-lg">Gerencie funcionários, gerentes e administradores</p>
           </div>
           <button
             onClick={() => {
@@ -113,6 +117,7 @@ export default function StaffPage() {
                 last_name: "",
                 password: "",
                 role: "staff",
+                operation_type: "SALON",
                 is_active: true,
               });
               setShowAddModal(true);
@@ -124,22 +129,22 @@ export default function StaffPage() {
           </button>
         </div>
 
-        <div className="card">
+        <div className="card animate-slide-up">
           <div className="flex gap-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Buscar usuários..."
+                placeholder="Buscar usuários por nome, email ou username..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="input-field pl-12"
               />
             </div>
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="px-5 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-semibold bg-white"
             >
               <option value="">Todas as Funções</option>
               <option value="admin">Administrador</option>
@@ -155,38 +160,41 @@ export default function StaffPage() {
             <p className="mt-4 text-slate-600">Carregando usuários...</p>
           </div>
         ) : (
-          <div className="card overflow-hidden p-0">
-            <div className="overflow-x-auto">
+          <div className="card overflow-hidden p-0 animate-slide-up">
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100/50">
                   <tr>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Usuário</th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">E-mail</th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Função</th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Status</th>
-                    <th className="text-right py-4 px-6 text-sm font-semibold text-slate-700">Ações</th>
+                    <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Usuário</th>
+                    <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">E-mail</th>
+                    <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Função</th>
+                    <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Operação</th>
+                    <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Status</th>
+                    <th className="text-right py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Ações</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
-                            <span className="text-white font-semibold">
+                <tbody className="divide-y divide-slate-100">
+                  {users.map((user, index) => (
+                    <tr key={user.id} className="table-row animate-fade-in" style={{ animationDelay: `${index * 0.03}s` }}>
+                      <td className="py-5 px-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <span className="text-white font-bold text-lg">
                               {user.full_name.charAt(0).toUpperCase()}
                             </span>
                           </div>
                           <div>
-                            <p className="font-medium text-slate-900">{user.full_name}</p>
-                            <p className="text-sm text-slate-500">@{user.username}</p>
+                            <p className="font-bold text-lg text-slate-900">{user.full_name}</p>
+                            <p className="text-sm text-slate-500 font-medium">@{user.username}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-sm text-slate-600">{user.email}</td>
-                      <td className="py-4 px-6">
+                      <td className="py-5 px-6">
+                        <span className="text-slate-700 font-medium">{user.email}</span>
+                      </td>
+                      <td className="py-5 px-6">
                         <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleColor(
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold ${getRoleColor(
                             user.role
                           )}`}
                         >
@@ -194,18 +202,19 @@ export default function StaffPage() {
                           {user.role === "admin" ? "Administrador" : user.role === "manager" ? "Gerente" : "Funcionário"}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            user.is_active
-                              ? "bg-green-100 text-green-800"
-                              : "bg-slate-100 text-slate-800"
-                          }`}
-                        >
-                          {user.is_active ? "Ativo" : "Inativo"}
+                      <td className="py-5 px-6">
+                        <span className="badge-purple">
+                          {(user as any).operation_type === "SALON" ? "Salon" : (user as any).operation_type === "STUDIO" ? "Studio" : "Ambos"}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-5 px-6">
+                        {user.is_active ? (
+                          <span className="badge-success">Ativo</span>
+                        ) : (
+                          <span className="badge-warning">Inativo</span>
+                        )}
+                      </td>
+                      <td className="py-5 px-6">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => {
@@ -217,13 +226,14 @@ export default function StaffPage() {
                                 last_name: user.last_name,
                                 password: "",
                                 role: user.role,
+                                operation_type: (user as any).operation_type || "SALON",
                                 is_active: user.is_active,
                               });
                               setShowAddModal(true);
                             }}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit className="w-5 h-5" />
                           </button>
                         </div>
                       </td>
@@ -238,75 +248,87 @@ export default function StaffPage() {
 
       {/* Add/Edit Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="p-6 border-b border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-900">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-slide-up border border-slate-200">
+            <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 {editingUser ? "Editar Usuário" : "Adicionar Funcionário"}
-            </h2>
+              </h2>
+              <p className="text-slate-600 mt-1 text-sm">Preencha os dados do funcionário</p>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Nome</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Nome</label>
                   <input
                     type="text"
                     value={formData.first_name}
                     onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    className="input-field"
+                    placeholder="Primeiro nome"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Sobrenome</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Sobrenome</label>
                   <input
                     type="text"
                     value={formData.last_name}
                     onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    className="input-field"
+                    placeholder="Sobrenome"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Usuário *</label>
+                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Usuário *</label>
                 <input
                   type="text"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="input-field"
                   required
+                  placeholder="username"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">E-mail *</label>
+                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">E-mail *</label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="input-field"
                   required
+                  placeholder="email@exemplo.com"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">
                   Senha {editingUser ? "(deixe em branco para manter a atual)" : "*"}
                 </label>
                 <input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="input-field"
                   required={!editingUser}
                   minLength={8}
+                  placeholder="Mínimo 8 caracteres"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Função *</label>
+                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Função *</label>
                 <select
                   value={formData.role}
-                  onChange={(e) =>
-                    setFormData({ ...formData, role: e.target.value as "admin" | "manager" | "staff" })
-                  }
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  onChange={(e) => {
+                    const newRole = e.target.value as "admin" | "manager" | "staff";
+                    setFormData({ 
+                      ...formData, 
+                      role: newRole,
+                      // Auto-set operation_type for admin
+                      operation_type: newRole === "admin" ? "BOTH" : formData.operation_type
+                    });
+                  }}
+                  className="input-field font-semibold"
                   required
                 >
                   <option value="staff">Funcionário</option>
@@ -314,14 +336,33 @@ export default function StaffPage() {
                   <option value="admin">Administrador</option>
                 </select>
               </div>
-              <div className="flex items-center">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Operação *</label>
+                <select
+                  value={formData.operation_type}
+                  onChange={(e) =>
+                    setFormData({ ...formData, operation_type: e.target.value as "SALON" | "STUDIO" | "BOTH" })
+                  }
+                  className="input-field font-semibold"
+                  required
+                  disabled={formData.role === "admin"}
+                >
+                  <option value="SALON">Salon</option>
+                  <option value="STUDIO">Studio</option>
+                  <option value="BOTH">Ambos (Admin)</option>
+                </select>
+                {formData.role === "admin" && (
+                  <p className="text-xs text-slate-500 mt-2 font-medium">Administradores têm acesso a ambas as operações</p>
+                )}
+              </div>
+              <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <input
                   type="checkbox"
                   checked={formData.is_active}
                   onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
                 />
-                <label className="ml-2 text-sm font-medium text-slate-700">Ativo</label>
+                <label className="text-sm font-bold text-slate-700 cursor-pointer">Usuário Ativo</label>
               </div>
               <div className="flex gap-3 pt-4">
                 <button

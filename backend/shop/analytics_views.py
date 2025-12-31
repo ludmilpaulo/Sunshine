@@ -5,9 +5,29 @@ from django.db.models import Sum, Count, Q, Avg
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from datetime import timedelta, datetime
-from .models import Sale, Payment
+from .models import Sale, Payment, UserProfile
 
 User = get_user_model()
+
+
+def apply_operation_type_filter(sales_query, request, operation_type_param=None):
+    """Apply operation type filter to sales query based on user profile or explicit parameter"""
+    operation_type = operation_type_param or request.query_params.get("operation_type")
+    
+    if operation_type:
+        # Explicit filter from query param
+        sales_query = sales_query.filter(operation_type=operation_type)
+    else:
+        # Auto-filter based on user profile (unless admin with BOTH access)
+        try:
+            profile = request.user.profile
+            if profile.operation_type != "BOTH":
+                sales_query = sales_query.filter(operation_type=profile.operation_type)
+        except UserProfile.DoesNotExist:
+            # Default to SALON if no profile
+            pass
+    
+    return sales_query
 
 
 @api_view(["GET"])
@@ -136,6 +156,9 @@ def sales_trend_by_user(request):
         created_at__lte=end_date,
     )
     
+    # Apply operation type filter
+    sales_query = apply_operation_type_filter(sales_query, request)
+    
     if user_id:
         sales_query = sales_query.filter(cashier_id=user_id)
 
@@ -222,12 +245,18 @@ def top_sellers(request):
     else:  # month
         start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
+    # Build query
+    sales_query = Sale.objects.filter(
+        status=Sale.Status.PAID,
+        created_at__gte=start_date,
+    )
+    
+    # Apply operation type filter
+    sales_query = apply_operation_type_filter(sales_query, request)
+    
     # Get top sellers
     top_sellers = (
-        Sale.objects.filter(
-            status=Sale.Status.PAID,
-            created_at__gte=start_date,
-        )
+        sales_query
         .values("cashier_id", "cashier__username", "cashier__first_name", "cashier__last_name")
         .annotate(
             total_revenue=Sum("total"),
@@ -307,6 +336,13 @@ def sales_by_payment_method(request):
 
     # Build query for sales
     sales_query = Sale.objects.filter(status=Sale.Status.PAID)
+    
+    # Apply operation type filter
+    sales_query = apply_operation_type_filter(sales_query, request)
+    
+    # Staff users (non-admin, non-manager) can only see their own sales
+    if not request.user.is_superuser and not request.user.is_staff:
+        sales_query = sales_query.filter(cashier_id=request.user.id)
     
     if start_date:
         sales_query = sales_query.filter(created_at__gte=start_date)
@@ -409,6 +445,13 @@ def sales_by_user_with_tax(request):
 
     # Build query
     sales_query = Sale.objects.filter(status=Sale.Status.PAID)
+    
+    # Apply operation type filter
+    sales_query = apply_operation_type_filter(sales_query, request)
+    
+    # Staff users (non-admin, non-manager) can only see their own sales
+    if not request.user.is_superuser and not request.user.is_staff:
+        user_id = str(request.user.id)  # Force filter to current user
     
     if start_date:
         sales_query = sales_query.filter(created_at__gte=start_date)

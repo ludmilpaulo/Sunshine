@@ -112,6 +112,23 @@ export default function TestScannerPage() {
             <li>Teste digitando manualmente um código e pressionando Enter</li>
           </ul>
         </div>
+
+        <div className="card mt-6 bg-green-50 border-green-200">
+          <h3 className="font-semibold text-green-900 mb-2">🧪 Teste Manual:</h3>
+          <div className="text-sm text-green-800 space-y-2">
+            <p>Para testar sem scanner físico:</p>
+            <ol className="list-decimal list-inside space-y-1 ml-2">
+              <li>Abra o Console do navegador (F12)</li>
+              <li>Digite rapidamente um código de barras (ex: 7898553445613)</li>
+              <li>Pressione Enter imediatamente após digitar</li>
+              <li>O código deve aparecer na lista acima</li>
+            </ol>
+            <p className="mt-2 text-xs text-green-700">
+              <strong>Nota:</strong> O scanner detecta entrada rápida (&lt;50ms entre caracteres). 
+              Digite rápido para simular um scanner real.
+            </p>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

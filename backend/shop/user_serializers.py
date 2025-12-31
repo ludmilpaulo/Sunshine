@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from .models import UserProfile
 
 User = get_user_model()
 
@@ -7,6 +8,7 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
+    operation_type = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -21,6 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
             "is_superuser",
             "is_active",
             "role",
+            "operation_type",
             "date_joined",
             "last_login",
         ]
@@ -38,11 +41,58 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.first_name or obj.last_name:
             return f"{obj.first_name} {obj.last_name}".strip()
         return obj.username
+    
+    def get_operation_type(self, obj):
+        try:
+            profile = obj.profile
+            return profile.operation_type
+        except UserProfile.DoesNotExist:
+            # Default to SALON for existing users without profile
+            return "SALON"
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating users, including operation_type"""
+    operation_type = serializers.ChoiceField(
+        choices=["SALON", "STUDIO", "BOTH"],
+        required=False,
+        write_only=True
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "is_active",
+            "operation_type",
+        ]
+
+    def update(self, instance, validated_data):
+        operation_type = validated_data.pop("operation_type", None)
+        user = super().update(instance, validated_data)
+        
+        # Update operation_type if provided
+        if operation_type is not None:
+            UserProfile.objects.update_or_create(
+                user=user,
+                defaults={"operation_type": operation_type}
+            )
+        
+        return user
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True, min_length=8)
     role = serializers.ChoiceField(choices=["admin", "manager", "staff"], write_only=True, required=True)
+    operation_type = serializers.ChoiceField(
+        choices=["SALON", "STUDIO", "BOTH"],
+        write_only=True,
+        required=True,
+        help_text="SALON for salon users, STUDIO for studio users, BOTH for admin"
+    )
 
     class Meta:
         model = User
@@ -53,11 +103,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
             "last_name",
             "password",
             "role",
+            "operation_type",
             "is_active",
         ]
 
     def create(self, validated_data):
         role = validated_data.pop("role")
+        operation_type = validated_data.pop("operation_type")
         password = validated_data.pop("password")
         user = User.objects.create(**validated_data)
         user.set_password(password)
@@ -65,6 +117,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
         if role == "admin":
             user.is_superuser = True
             user.is_staff = True
+            # Admin can access both by default
+            if operation_type == "BOTH":
+                operation_type = "BOTH"
         elif role == "manager":
             user.is_staff = True
             user.is_superuser = False
@@ -73,5 +128,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
             user.is_superuser = False
 
         user.save()
+        
+        # Create or update user profile
+        UserProfile.objects.update_or_create(
+            user=user,
+            defaults={"operation_type": operation_type}
+        )
+        
         return user
 

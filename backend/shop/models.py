@@ -1,5 +1,32 @@
 from django.conf import settings
 from django.db import models
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+
+class UserProfile(models.Model):
+    """Extended user profile for operation type (Salon/Studio)"""
+    class OperationType(models.TextChoices):
+        SALON = "SALON", "Salon"
+        STUDIO = "STUDIO", "Studio"
+        BOTH = "BOTH", "Both"  # For admin users who can access both
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    operation_type = models.CharField(
+        max_length=10,
+        choices=OperationType.choices,
+        default=OperationType.SALON
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "User Profile"
+        verbose_name_plural = "User Profiles"
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_operation_type_display()}"
 
 
 class Product(models.Model):
@@ -37,9 +64,18 @@ class Sale(models.Model):
         PAID = "PAID", "Paid"
         VOID = "VOID", "Void"
         REFUNDED = "REFUNDED", "Refunded"
+    
+    class OperationType(models.TextChoices):
+        SALON = "SALON", "Salon"
+        STUDIO = "STUDIO", "Studio"
 
     number = models.CharField(max_length=32, unique=True)
     cashier = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    operation_type = models.CharField(
+        max_length=10,
+        choices=OperationType.choices,
+        default=OperationType.SALON
+    )
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PAID)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
     tax = models.DecimalField(max_digits=12, decimal_places=2)

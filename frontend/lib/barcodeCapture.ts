@@ -148,10 +148,31 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
     // Normalize barcode before processing
     const normalizedCode = normalizeBarcode(code);
     
+    // Check if we're in an input field - if so, only process if it's clearly a scanner (fast input)
+    const target = e.target as HTMLElement;
+    const isInputField = target && (
+      target.tagName === "INPUT" || 
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable
+    );
+    
+    // If in input field and not fast input, don't interfere
+    if (isInputField && !isScanning) {
+      buffer = "";
+      return;
+    }
+    
     // Only prevent default if we have a valid barcode from scanner
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
+    if (isScanning || normalizedCode.length >= MIN_LENGTH) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      
+      // Clear input field if we intercepted scanner input
+      if (isInputField && target instanceof HTMLInputElement) {
+        target.value = "";
+      }
+    }
     
     buffer = "";
     isScanning = false;
@@ -167,11 +188,26 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
+    // Don't interfere if user is typing in an input field (unless it's very fast - scanner)
+    const target = e.target as HTMLElement;
+    const isInputField = target && (
+      target.tagName === "INPUT" || 
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable
+    );
+    
     const now = Date.now();
     const timeSinceLastKey = now - lastTime;
     
     // Detect if this might be scanner input (very fast typing)
     const isFastInput = timeSinceLastKey < 50;
+    
+    // If user is typing in input field slowly, don't interfere
+    if (isInputField && !isFastInput && timeSinceLastKey > 100) {
+      buffer = "";
+      isScanning = false;
+      return;
+    }
     
     // Reset buffer if too much time passed (human typing, not scanner)
     if (timeSinceLastKey > TIMEOUT_MS) {

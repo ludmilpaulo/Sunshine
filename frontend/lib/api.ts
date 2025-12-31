@@ -210,8 +210,8 @@ export const productsApi = {
 
 // Sales
 export const salesApi = {
-  checkout: async (items: CheckoutItem[], payments: CheckoutPayment[]): Promise<CheckoutResponse> => {
-    const response = await api.post("/sales/checkout/", { items, payments });
+  checkout: async (items: CheckoutItem[], payments: CheckoutPayment[], operationType?: "SALON" | "STUDIO"): Promise<CheckoutResponse> => {
+    const response = await api.post("/sales/checkout/", { items, payments, operation_type: operationType });
     return response.data;
   },
   list: async (dateFrom?: string, dateTo?: string, page?: number) => {
@@ -322,11 +322,11 @@ export const usersApi = {
     const response = await api.get(`/users/${id}/`);
     return response.data;
   },
-  create: async (data: Partial<User> & { password: string; role: "admin" | "manager" | "staff" }) => {
+  create: async (data: Partial<User> & { password: string; role: "admin" | "manager" | "staff"; operation_type?: "SALON" | "STUDIO" | "BOTH" }) => {
     const response = await api.post("/users/", data);
     return response.data;
   },
-  update: async (id: number, data: Partial<User> & { password?: string }) => {
+  update: async (id: number, data: Partial<User> & { password?: string; operation_type?: "SALON" | "STUDIO" | "BOTH" }) => {
     const response = await api.patch(`/users/${id}/`, data);
     return response.data;
   },
@@ -437,12 +437,14 @@ export const analyticsApi = {
     date_from?: string;
     date_to?: string;
     user_id?: number;
+    operation_type?: "SALON" | "STUDIO";
   }): Promise<SalesByUserResponse> => {
     const queryParams = new URLSearchParams();
     if (params?.period) queryParams.append("period", params.period);
     if (params?.date_from) queryParams.append("date_from", params.date_from);
     if (params?.date_to) queryParams.append("date_to", params.date_to);
     if (params?.user_id) queryParams.append("user_id", params.user_id.toString());
+    if (params?.operation_type) queryParams.append("operation_type", params.operation_type);
     const response = await api.get(`/analytics/sales-by-user/?${queryParams.toString()}`);
     return response.data;
   },
@@ -451,12 +453,14 @@ export const analyticsApi = {
     date_from?: string;
     date_to?: string;
     user_id?: number;
+    operation_type?: "SALON" | "STUDIO";
   }): Promise<SalesByUserWithTaxResponse> => {
     const queryParams = new URLSearchParams();
     if (params?.period) queryParams.append("period", params.period);
     if (params?.date_from) queryParams.append("date_from", params.date_from);
     if (params?.date_to) queryParams.append("date_to", params.date_to);
     if (params?.user_id) queryParams.append("user_id", params.user_id.toString());
+    if (params?.operation_type) queryParams.append("operation_type", params.operation_type);
     const response = await api.get(`/analytics/sales-by-user-with-tax/?${queryParams.toString()}`);
     return response.data;
   },
@@ -464,11 +468,13 @@ export const analyticsApi = {
     period?: "day" | "week" | "month";
     date_from?: string;
     date_to?: string;
+    operation_type?: "SALON" | "STUDIO";
   }): Promise<SalesByPaymentMethodResponse> => {
     const queryParams = new URLSearchParams();
     if (params?.period) queryParams.append("period", params.period);
     if (params?.date_from) queryParams.append("date_from", params.date_from);
     if (params?.date_to) queryParams.append("date_to", params.date_to);
+    if (params?.operation_type) queryParams.append("operation_type", params.operation_type);
     const response = await api.get(`/analytics/sales-by-payment-method/?${queryParams.toString()}`);
     return response.data;
   },

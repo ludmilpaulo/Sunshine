@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useCartStore } from "@/lib/store";
-import { productsApi, salesApi, printApi } from "@/lib/api";
+import { productsApi, salesApi, printApi, authApi } from "@/lib/api";
 import { attachBarcodeCapture } from "@/lib/barcodeCapture";
 import toast from "react-hot-toast";
 import { ShoppingCart, Plus, Minus, Trash2, CreditCard, DollarSign, Receipt } from "lucide-react";
@@ -15,8 +15,22 @@ export default function POSPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
   const [paymentAmount, setPaymentAmount] = useState("");
+  const [userOperationType, setUserOperationType] = useState<"SALON" | "STUDIO" | "BOTH">("SALON");
+  const [selectedOperationType, setSelectedOperationType] = useState<"SALON" | "STUDIO">("SALON");
 
   useEffect(() => {
+    // Get user operation type
+    authApi.getMe().then((user) => {
+      const opType = (user as any).operation_type || "SALON";
+      setUserOperationType(opType);
+      // If user has BOTH, default to SALON, otherwise use their type
+      if (opType === "BOTH") {
+        setSelectedOperationType("SALON");
+      } else {
+        setSelectedOperationType(opType as "SALON" | "STUDIO");
+      }
+    });
+    
     // Enable debug mode in development
     const isDev = process.env.NODE_ENV === "development";
     
@@ -99,7 +113,7 @@ export default function POSPage() {
         });
       }
 
-      const result = await salesApi.checkout(checkoutItems, payments);
+      const result = await salesApi.checkout(checkoutItems, payments, selectedOperationType);
 
       // Try to print receipt (non-blocking)
       try {
@@ -141,25 +155,44 @@ export default function POSPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Ponto de Venda</h1>
-          <p className="text-slate-600 mt-1">Escaneie produtos para adicionar ao carrinho</p>
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex justify-between items-center animate-slide-up">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
+              Ponto de Venda
+            </h1>
+            <p className="text-slate-600 mt-2 text-lg">Escaneie produtos para adicionar ao carrinho</p>
+          </div>
+          {userOperationType === "BOTH" && (
+            <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl shadow-md border border-slate-200">
+              <label className="text-sm font-semibold text-slate-700">Operação:</label>
+              <select
+                value={selectedOperationType}
+                onChange={(e) => setSelectedOperationType(e.target.value as "SALON" | "STUDIO")}
+                className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-semibold bg-white"
+              >
+                <option value="SALON">Salon</option>
+                <option value="STUDIO">Studio</option>
+              </select>
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-slide-up">
           {/* Cart */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="card">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5" />
-                  Carrinho
+            <div className="card group">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <ShoppingCart className="w-5 h-5 text-white" />
+                  </div>
+                  Carrinho de Compras
                 </h2>
                 {items.length > 0 && (
                   <button
                     onClick={clear}
-                    className="text-sm text-red-600 hover:text-red-700 font-medium"
+                    className="text-sm text-red-600 hover:text-red-700 font-semibold px-3 py-1.5 rounded-lg hover:bg-red-50 transition-all duration-200"
                   >
                     Limpar Tudo
                   </button>
@@ -167,54 +200,60 @@ export default function POSPage() {
               </div>
 
               {items.length === 0 ? (
-                <div className="text-center py-12">
-                  <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                  <p className="text-slate-500">Escaneie itens para adicionar ao carrinho</p>
+                <div className="text-center py-16">
+                  <div className="w-24 h-24 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <ShoppingCart className="w-12 h-12 text-slate-400" />
+                  </div>
+                  <p className="text-slate-600 font-medium text-lg">Escaneie itens para adicionar ao carrinho</p>
                   {loading && (
-                    <p className="mt-2 text-sm text-blue-600">Carregando produto...</p>
+                    <div className="mt-4 flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                      <p className="text-sm text-blue-600 font-medium">Carregando produto...</p>
+                    </div>
                   )}
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {items.map((item) => (
+                  {items.map((item, index) => (
                     <div
                       key={item.product.id}
-                      className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200"
+                      className="flex items-center justify-between p-5 bg-gradient-to-r from-white to-slate-50 rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-300 animate-fade-in"
+                      style={{ animationDelay: `${index * 0.05}s` }}
                     >
                       <div className="flex-1">
-                        <p className="font-semibold text-slate-900">{item.product.name}</p>
-                        <p className="text-sm text-slate-600">
+                        <p className="font-bold text-lg text-slate-900 mb-1">{item.product.name}</p>
+                        <p className="text-sm text-slate-600 font-medium">
                           {formatCurrency(parseFloat(item.unit_price))} cada
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 bg-white rounded-lg border border-slate-200">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1 bg-white rounded-xl border-2 border-slate-200 shadow-sm">
                           <button
                             onClick={() => updateQty(item.product.id, item.qty - 1)}
-                            className="p-2 hover:bg-slate-100 rounded-l-lg transition-colors"
+                            className="p-2.5 hover:bg-slate-100 rounded-l-xl transition-all duration-200 active:scale-95"
                           >
-                            <Minus className="w-4 h-4 text-slate-600" />
+                            <Minus className="w-4 h-4 text-slate-700" />
                           </button>
-                          <span className="px-4 py-2 font-semibold text-slate-900 min-w-[3rem] text-center">
+                          <span className="px-5 py-2.5 font-bold text-slate-900 min-w-[3.5rem] text-center text-lg">
                             {item.qty}
                           </span>
                           <button
                             onClick={() => updateQty(item.product.id, item.qty + 1)}
-                            className="p-2 hover:bg-slate-100 rounded-r-lg transition-colors"
+                            className="p-2.5 hover:bg-slate-100 rounded-r-xl transition-all duration-200 active:scale-95"
                           >
-                            <Plus className="w-4 h-4 text-slate-600" />
+                            <Plus className="w-4 h-4 text-slate-700" />
                           </button>
                         </div>
-                        <div className="text-right min-w-[5rem]">
-                          <p className="font-bold text-slate-900">
+                        <div className="text-right min-w-[6rem]">
+                          <p className="font-bold text-xl text-blue-600">
                             {formatCurrency(parseFloat(item.unit_price) * item.qty)}
                           </p>
                         </div>
                         <button
                           onClick={() => removeItem(item.product.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 active:scale-95"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
                     </div>
@@ -226,21 +265,26 @@ export default function POSPage() {
 
           {/* Totals & Checkout */}
           <div className="space-y-4">
-            <div className="card bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
-              <h2 className="text-lg font-semibold text-slate-900 mb-4">Resumo do Pedido</h2>
-              <div className="space-y-3">
-                <div className="flex justify-between text-slate-600">
-                  <span>Subtotal:</span>
-                  <span className="font-medium">{formatCurrency(getSubtotal())}</span>
+            <div className="card-gradient from-blue-500 via-blue-600 to-indigo-600 group">
+              <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                  <Receipt className="w-5 h-5" />
                 </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>Imposto:</span>
-                  <span className="font-medium">{formatCurrency(getTax())}</span>
+                Resumo do Pedido
+              </h2>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-2 border-b border-white/20">
+                  <span className="text-blue-100 font-medium">Subtotal:</span>
+                  <span className="font-bold text-lg text-white">{formatCurrency(getSubtotal())}</span>
                 </div>
-                <div className="border-t border-slate-300 pt-3">
-                  <div className="flex justify-between">
-                    <span className="text-lg font-semibold text-slate-900">Total:</span>
-                    <span className="text-2xl font-bold text-blue-600">
+                <div className="flex justify-between items-center py-2 border-b border-white/20">
+                  <span className="text-blue-100 font-medium">Imposto:</span>
+                  <span className="font-bold text-lg text-white">{formatCurrency(getTax())}</span>
+                </div>
+                <div className="pt-4 mt-4 border-t-2 border-white/30">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xl font-bold text-white">Total:</span>
+                    <span className="text-3xl font-extrabold text-white drop-shadow-lg">
                       {formatCurrency(getTotal())}
                     </span>
                   </div>
@@ -251,17 +295,17 @@ export default function POSPage() {
             <button
               onClick={handleCheckout}
               disabled={items.length === 0 || checkoutLoading}
-              className="w-full btn-primary py-4 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full btn-primary py-5 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 shadow-2xl"
             >
               {checkoutLoading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Processando...
+                  <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Processando...</span>
                 </>
               ) : (
                 <>
-                  <Receipt className="w-5 h-5" />
-                  Finalizar Venda
+                  <Receipt className="w-6 h-6" />
+                  <span>Finalizar Venda</span>
                 </>
               )}
             </button>
@@ -271,40 +315,50 @@ export default function POSPage() {
 
       {/* Payment Modal */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="p-6 border-b border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-900">Pagamento</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-slide-up border border-slate-200">
+            <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                Pagamento
+              </h2>
+              <p className="text-slate-600 mt-1 text-sm">Selecione o método de pagamento</p>
             </div>
             <div className="p-6 space-y-6">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-bold text-slate-700 mb-3 uppercase tracking-wide">
                   Método de Pagamento
                 </label>
                 <div className="grid grid-cols-3 gap-3">
-                  {(["CASH", "CARD", "TRANSFER"] as const).map((method) => (
-                    <button
-                      key={method}
-                      type="button"
-                      onClick={() => setPaymentMethod(method)}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        paymentMethod === method
-                          ? "border-blue-600 bg-blue-50"
-                          : "border-slate-200 hover:border-slate-300"
-                      }`}
-                    >
-                      {method === "CASH" && <DollarSign className="w-6 h-6 mx-auto mb-2" />}
-                      {method === "CARD" && <CreditCard className="w-6 h-6 mx-auto mb-2" />}
-                      {method === "TRANSFER" && <Receipt className="w-6 h-6 mx-auto mb-2" />}
-                      <p className="text-sm font-medium">
-                        {method === "CASH" ? "Dinheiro" : method === "CARD" ? "Cartão" : "Transferência"}
-                      </p>
-                    </button>
-                  ))}
+                  {(["CASH", "CARD", "TRANSFER"] as const).map((method) => {
+                    const isSelected = paymentMethod === method;
+                    return (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => setPaymentMethod(method)}
+                        className={`p-5 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 ${
+                          isSelected
+                            ? "border-blue-600 bg-gradient-to-br from-blue-50 to-blue-100 shadow-lg scale-105"
+                            : "border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50"
+                        }`}
+                      >
+                        <div className={`w-12 h-12 mx-auto mb-3 rounded-xl flex items-center justify-center ${
+                          isSelected ? "bg-blue-600" : "bg-slate-100"
+                        } transition-colors`}>
+                          {method === "CASH" && <DollarSign className={`w-6 h-6 ${isSelected ? "text-white" : "text-slate-600"}`} />}
+                          {method === "CARD" && <CreditCard className={`w-6 h-6 ${isSelected ? "text-white" : "text-slate-600"}`} />}
+                          {method === "TRANSFER" && <Receipt className={`w-6 h-6 ${isSelected ? "text-white" : "text-slate-600"}`} />}
+                        </div>
+                        <p className={`text-sm font-bold ${isSelected ? "text-blue-700" : "text-slate-700"}`}>
+                          {method === "CASH" ? "Dinheiro" : method === "CARD" ? "Cartão" : "Transferência"}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">
                   Valor Recebido
                 </label>
                 <input
@@ -312,31 +366,39 @@ export default function POSPage() {
                   step="0.01"
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-lg font-semibold"
+                  className="input-field text-2xl font-bold text-center"
                   autoFocus
+                  placeholder="0.00"
                 />
               </div>
               {parseFloat(paymentAmount) > getTotal() && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm text-green-800 font-medium">Troco:</p>
-                  <p className="text-2xl font-bold text-green-600">
+                <div className="p-5 bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl animate-fade-in">
+                  <p className="text-sm text-emerald-800 font-semibold uppercase tracking-wide mb-1">Troco:</p>
+                  <p className="text-3xl font-extrabold text-emerald-600">
                     {formatCurrency(parseFloat(paymentAmount) - getTotal())}
                   </p>
                 </div>
               )}
-              <div className="flex gap-3">
+              <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => setShowPaymentModal(false)}
-                  className="flex-1 btn-secondary"
+                  className="flex-1 btn-secondary py-4"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleProcessPayment}
                   disabled={checkoutLoading || parseFloat(paymentAmount) < getTotal()}
-                  className="flex-1 btn-primary disabled:opacity-50"
+                  className="flex-1 btn-primary py-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {checkoutLoading ? "Processando..." : "Finalizar Venda"}
+                  {checkoutLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Processando...
+                    </span>
+                  ) : (
+                    "Finalizar Venda"
+                  )}
                 </button>
               </div>
             </div>

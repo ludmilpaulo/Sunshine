@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.utils.timezone import now
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes, action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from .models import Product, Inventory, Sale, SaleItem, Payment, StockMove
@@ -26,6 +26,17 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.select_related("inventory").all()
     permission_classes = [IsAuthenticated]
     pagination_class = StandardResultsSetPagination
+
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        Admin only for create/update/delete, authenticated for read.
+        """
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsAdminUser]
+        else:
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
         if self.action in ["create", "update", "partial_update"]:
@@ -265,10 +276,34 @@ def checkout(request):
         import time
         sale_number = now().strftime("S%Y%m%d%H%M%S") + f"{int(time.time() * 1000000) % 1000000:06d}"
 
+        # Get operation type from request or user profile
+        operation_type = body.get("operation_type", None)
+        if not operation_type:
+            # Try to get from user profile
+            try:
+                from .models import UserProfile
+                profile = request.user.profile
+                operation_type = profile.operation_type
+                # If user has BOTH, require explicit operation_type in request
+                if operation_type == "BOTH":
+                    return Response(
+                        {"detail": "OPERATION_TYPE_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST
+                    )
+            except:
+                # Default to SALON if no profile
+                operation_type = Sale.OperationType.SALON
+        
+        # Validate operation type
+        if operation_type not in [Sale.OperationType.SALON, Sale.OperationType.STUDIO]:
+            return Response(
+                {"detail": "INVALID_OPERATION_TYPE"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
         # Create sale
         sale = Sale.objects.create(
             number=sale_number,
             cashier=request.user,
+            operation_type=operation_type,
             subtotal=subtotal.quantize(Decimal("0.01")),
             tax=tax_total.quantize(Decimal("0.01")),
             total=total,

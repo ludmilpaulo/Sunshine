@@ -4,6 +4,7 @@ Usage: python manage.py create_test_users
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from shop.models import UserProfile
 
 User = get_user_model()
 
@@ -30,12 +31,23 @@ class Command(BaseCommand):
         if created:
             admin_user.set_password(default_password)
             admin_user.save()
+            # Create profile with BOTH operation type for admin
+            UserProfile.objects.get_or_create(
+                user=admin_user,
+                defaults={"operation_type": "BOTH"}
+            )
             self.stdout.write(
                 self.style.SUCCESS(f"✓ Created admin user: {admin_user.username} / {default_password}")
             )
         else:
             admin_user.set_password(default_password)
             admin_user.save()
+            # Update profile
+            UserProfile.objects.get_or_create(
+                user=admin_user,
+                defaults={"operation_type": "BOTH"}
+            )
+            UserProfile.objects.filter(user=admin_user).update(operation_type="BOTH")
             self.stdout.write(
                 self.style.WARNING(f"→ Updated admin user: {admin_user.username} / {default_password}")
             )
@@ -55,12 +67,23 @@ class Command(BaseCommand):
         if created:
             manager_user.set_password(default_password)
             manager_user.save()
+            # Create profile with SALON operation type for manager
+            UserProfile.objects.get_or_create(
+                user=manager_user,
+                defaults={"operation_type": "SALON"}
+            )
             self.stdout.write(
                 self.style.SUCCESS(f"✓ Created manager user: {manager_user.username} / {default_password}")
             )
         else:
             manager_user.set_password(default_password)
             manager_user.save()
+            # Update profile
+            UserProfile.objects.get_or_create(
+                user=manager_user,
+                defaults={"operation_type": "SALON"}
+            )
+            UserProfile.objects.filter(user=manager_user).update(operation_type="SALON")
             self.stdout.write(
                 self.style.WARNING(f"→ Updated manager user: {manager_user.username} / {default_password}")
             )
@@ -80,12 +103,23 @@ class Command(BaseCommand):
         if created:
             staff_user.set_password(default_password)
             staff_user.save()
+            # Create profile with SALON operation type for staff
+            UserProfile.objects.get_or_create(
+                user=staff_user,
+                defaults={"operation_type": "SALON"}
+            )
             self.stdout.write(
                 self.style.SUCCESS(f"✓ Created staff user: {staff_user.username} / {default_password}")
             )
         else:
             staff_user.set_password(default_password)
             staff_user.save()
+            # Update profile
+            UserProfile.objects.get_or_create(
+                user=staff_user,
+                defaults={"operation_type": "SALON"}
+            )
+            UserProfile.objects.filter(user=staff_user).update(operation_type="SALON")
             self.stdout.write(
                 self.style.WARNING(f"→ Updated staff user: {staff_user.username} / {default_password}")
             )

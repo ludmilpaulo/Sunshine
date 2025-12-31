@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { productsApi, stockApi } from "@/lib/api";
+import { productsApi, stockApi, authApi } from "@/lib/api";
 import { attachBarcodeCapture } from "@/lib/barcodeCapture";
 import toast from "react-hot-toast";
-import type { Product } from "@/lib/api";
+import type { Product, User } from "@/lib/api";
 import { Plus, Search, Edit, Package, AlertCircle, Scan, CheckCircle, Trash2 } from "lucide-react";
 
 export default function ProductsPage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -29,6 +31,13 @@ export default function ProductsPage() {
 
   useEffect(() => {
     loadProducts();
+    // Check if user is admin
+    authApi.getMe().then((userData) => {
+      setUser(userData);
+      setIsAdmin(userData.is_superuser || userData.role === "admin");
+    }).catch(() => {
+      setIsAdmin(false);
+    });
   }, [search]);
 
   useEffect(() => {
@@ -214,60 +223,64 @@ export default function ProductsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex justify-between items-center animate-slide-up">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Produtos</h1>
-            <p className="text-slate-600 mt-1">Gerencie seu catálogo de produtos</p>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent">
+              Produtos
+            </h1>
+            <p className="text-slate-600 mt-2 text-lg">Gerencie seu catálogo de produtos</p>
           </div>
           <div className="flex items-center gap-3">
             {scanningStatus.active && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-blue-700">Escaneando...</span>
+              <div className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-xl shadow-md animate-pulse">
+                <div className="w-3 h-3 bg-blue-600 rounded-full animate-ping"></div>
+                <span className="text-sm font-bold text-blue-700">Escaneando...</span>
               </div>
             )}
             {scanningStatus.lastScanned && !scanningStatus.active && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
-                <CheckCircle className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium text-green-700">
+              <div className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-50 to-green-50 border-2 border-emerald-300 rounded-xl shadow-md">
+                <CheckCircle className="w-5 h-5 text-emerald-600" />
+                <span className="text-sm font-bold text-emerald-700">
                   Escaneado: {scanningStatus.lastScanned}
                 </span>
               </div>
             )}
-            <button
-              onClick={() => {
-                setEditingProduct(null);
-              setFormData({
-                name: "",
-                barcode: "",
-                sku: "",
-                price: "",
-                cost: "",
-                tax_rate: "0",
-                active: true,
-                initial_stock: "0",
-              });
-              setShowAddModal(true);
-            }}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            Adicionar Produto
-          </button>
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  setEditingProduct(null);
+                  setFormData({
+                    name: "",
+                    barcode: "",
+                    sku: "",
+                    price: "",
+                    cost: "",
+                    tax_rate: "0",
+                    active: true,
+                    initial_stock: "0",
+                  });
+                  setShowAddModal(true);
+                }}
+                className="btn-primary flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Adicionar Produto
+              </button>
+            )}
           </div>
         </div>
 
         {/* Scanner Status Card */}
-        <div className="card bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200">
+        <div className="card-gradient from-blue-500 via-blue-600 to-indigo-600 group animate-slide-up">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <Scan className="w-6 h-6 text-blue-600" />
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 shadow-lg">
+                <Scan className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-900">Scanner de Código de Barras</h3>
-                <p className="text-sm text-slate-600">
+                <h3 className="font-bold text-xl text-white mb-1">Scanner de Código de Barras</h3>
+                <p className="text-blue-100/90 text-sm">
                   {scanningStatus.active
                     ? "Escaneando código..."
                     : scanningStatus.lastScanned
@@ -276,24 +289,24 @@ export default function ProductsPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${scanningStatus.active ? "bg-green-500 animate-pulse" : "bg-slate-300"}`}></div>
-              <span className="text-sm font-medium text-slate-600">
+            <div className="flex items-center gap-3 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-xl">
+              <div className={`w-4 h-4 rounded-full ${scanningStatus.active ? "bg-emerald-300 animate-pulse shadow-lg shadow-emerald-300/50" : "bg-slate-300"}`}></div>
+              <span className="text-sm font-bold text-white">
                 {scanningStatus.active ? "Ativo" : "Aguardando"}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="card">
+        <div className="card animate-slide-up">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
-              placeholder="Buscar produtos..."
+              placeholder="Buscar produtos por nome, código de barras ou SKU..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="input-field pl-12 text-base"
             />
           </div>
         </div>
@@ -304,47 +317,51 @@ export default function ProductsPage() {
             <p className="mt-4 text-slate-600">Carregando produtos...</p>
           </div>
         ) : (
-          <div className="card overflow-hidden p-0">
-            <div className="overflow-x-auto">
+          <div className="card overflow-hidden p-0 animate-slide-up">
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
+                <thead className="bg-gradient-to-r from-slate-50 to-slate-100/50">
                   <tr>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Produto</th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Código de Barras</th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Preço</th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Estoque</th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Status</th>
-                    <th className="text-right py-4 px-6 text-sm font-semibold text-slate-700">Ações</th>
+                    <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Produto</th>
+                    <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Código de Barras</th>
+                    <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Preço</th>
+                    <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Estoque</th>
+                    <th className="text-left py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Status</th>
+                    <th className="text-right py-4 px-6 text-sm font-bold text-slate-700 uppercase tracking-wider">Ações</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {products.map((product) => (
-                    <tr key={product.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                            <Package className="w-5 h-5 text-white" />
+                <tbody className="divide-y divide-slate-100">
+                  {products.map((product, index) => (
+                    <tr key={product.id} className="table-row animate-fade-in" style={{ animationDelay: `${index * 0.03}s` }}>
+                      <td className="py-5 px-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <Package className="w-6 h-6 text-white" />
                           </div>
                           <div>
-                            <p className="font-medium text-slate-900">{product.name}</p>
+                            <p className="font-bold text-lg text-slate-900">{product.name}</p>
                             {product.sku && (
-                              <p className="text-sm text-slate-500">SKU: {product.sku}</p>
+                              <p className="text-sm text-slate-500 font-medium">SKU: {product.sku}</p>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-sm text-slate-600 font-mono">{product.barcode}</td>
-                      <td className="py-4 px-6">
-                        <span className="font-semibold text-slate-900">
+                      <td className="py-5 px-6">
+                        <span className="text-sm text-slate-700 font-mono bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                          {product.barcode}
+                        </span>
+                      </td>
+                      <td className="py-5 px-6">
+                        <span className="font-bold text-lg text-blue-600">
                           {new Intl.NumberFormat("pt-AO", {
                             style: "currency",
                             currency: "AOA",
                           }).format(parseFloat(product.price))}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-5 px-6">
                         <div className="flex items-center gap-2">
-                          <span className={`font-medium ${
+                          <span className={`font-bold text-lg ${
                             (product.inventory?.qty_on_hand ?? 0) <= 10
                               ? "text-orange-600"
                               : "text-slate-900"
@@ -352,59 +369,59 @@ export default function ProductsPage() {
                             {product.inventory?.qty_on_hand ?? 0}
                           </span>
                           {(product.inventory?.qty_on_hand ?? 0) <= 10 && (
-                            <AlertCircle className="w-4 h-4 text-orange-500" />
+                            <AlertCircle className="w-5 h-5 text-orange-500 animate-pulse" />
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-6">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            product.active
-                              ? "bg-green-100 text-green-800"
-                              : "bg-slate-100 text-slate-800"
-                          }`}
-                        >
-                          {product.active ? "Ativo" : "Inativo"}
-                        </span>
+                      <td className="py-5 px-6">
+                        {product.active ? (
+                          <span className="badge-success">Ativo</span>
+                        ) : (
+                          <span className="badge-warning">Inativo</span>
+                        )}
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-5 px-6">
                         <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => {
-                              setEditingProduct(product);
-                              setFormData({
-                                name: product.name,
-                                barcode: product.barcode,
-                                sku: product.sku,
-                                price: product.price,
-                                cost: product.cost,
-                                tax_rate: product.tax_rate,
-                                active: product.active,
-                                initial_stock: String(product.inventory?.qty_on_hand || 0),
-                              });
-                              setShowAddModal(true);
-                            }}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Editar produto"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setStockAdjustment({ productId: product.id, qty: 0 });
-                            }}
-                            className="px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-                            title="Ajustar estoque"
-                          >
-                            Estoque
-                          </button>
-                          <button
-                            onClick={() => handleDelete(product)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Deletar produto"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {isAdmin && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditingProduct(product);
+                                  setFormData({
+                                    name: product.name,
+                                    barcode: product.barcode,
+                                    sku: product.sku,
+                                    price: product.price,
+                                    cost: product.cost,
+                                    tax_rate: product.tax_rate,
+                                    active: product.active,
+                                    initial_stock: String(product.inventory?.qty_on_hand || 0),
+                                  });
+                                  setShowAddModal(true);
+                                }}
+                                className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
+                                title="Editar produto"
+                              >
+                                <Edit className="w-5 h-5" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setStockAdjustment({ productId: product.id, qty: 0 });
+                                }}
+                                className="px-4 py-2 text-sm font-semibold bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all duration-200 hover:scale-105 active:scale-95"
+                                title="Ajustar estoque"
+                              >
+                                Estoque
+                              </button>
+                              <button
+                                onClick={() => handleDelete(product)}
+                                className="p-2.5 text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 hover:scale-110 active:scale-95"
+                                title="Deletar produto"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -418,34 +435,37 @@ export default function ProductsPage() {
 
       {/* Add/Edit Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="p-6 border-b border-slate-200">
-              <h2 className="text-2xl font-bold text-slate-900">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-slide-up border border-slate-200">
+            <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl">
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                 {editingProduct ? "Editar Produto" : "Adicionar Produto"}
               </h2>
+              <p className="text-slate-600 mt-1 text-sm">Preencha os dados do produto</p>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Nome *</label>
+                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Nome *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="input-field"
                   required
+                  placeholder="Nome do produto"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">
                   Código de Barras (escaneie para preencher) *
                 </label>
                 <input
                   type="text"
                   value={formData.barcode}
                   onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="input-field font-mono"
                   required
+                  placeholder="Escaneie ou digite o código"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">

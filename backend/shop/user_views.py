@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-from .user_serializers import UserSerializer, UserCreateSerializer
+from .user_serializers import UserSerializer, UserCreateSerializer, UserUpdateSerializer
 
 User = get_user_model()
 
@@ -19,6 +19,8 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action in ["create"]:
             return UserCreateSerializer
+        elif self.action in ["update", "partial_update"]:
+            return UserUpdateSerializer
         return UserSerializer
 
     def get_queryset(self):

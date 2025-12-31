@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { analyticsApi } from "@/lib/api";
+import { analyticsApi, authApi } from "@/lib/api";
 import { BarChart3, TrendingUp, Users, Award, Calendar, Filter, CreditCard, DollarSign, Receipt } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -12,11 +12,23 @@ export default function AnalyticsPage() {
   const [period, setPeriod] = useState<Period>("month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [operationType, setOperationType] = useState<"SALON" | "STUDIO" | "ALL">("ALL");
   const [loading, setLoading] = useState(false);
   const [salesData, setSalesData] = useState<any>(null);
   const [salesDataWithTax, setSalesDataWithTax] = useState<any>(null);
   const [paymentMethodData, setPaymentMethodData] = useState<any>(null);
   const [topSellers, setTopSellers] = useState<any>(null);
+  const [userOperationType, setUserOperationType] = useState<"SALON" | "STUDIO" | "BOTH">("SALON");
+
+  useEffect(() => {
+    authApi.getMe().then((user) => {
+      const opType = (user as any).operation_type || "SALON";
+      setUserOperationType(opType);
+      if (opType !== "BOTH") {
+        setOperationType(opType as "SALON" | "STUDIO");
+      }
+    });
+  }, []);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("pt-AO", {
@@ -28,22 +40,17 @@ export default function AnalyticsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
+      const params = {
+        period,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+        operation_type: operationType !== "ALL" ? operationType : undefined,
+      };
+      
       const [salesResponse, salesWithTaxResponse, paymentMethodResponse, topSellersResponse] = await Promise.all([
-        analyticsApi.getSalesByUser({
-          period,
-          date_from: dateFrom || undefined,
-          date_to: dateTo || undefined,
-        }),
-        analyticsApi.getSalesByUserWithTax({
-          period,
-          date_from: dateFrom || undefined,
-          date_to: dateTo || undefined,
-        }),
-        analyticsApi.getSalesByPaymentMethod({
-          period,
-          date_from: dateFrom || undefined,
-          date_to: dateTo || undefined,
-        }),
+        analyticsApi.getSalesByUser(params),
+        analyticsApi.getSalesByUserWithTax(params),
+        analyticsApi.getSalesByPaymentMethod(params),
         analyticsApi.getTopSellers({ period, limit: 10 }),
       ]);
 
@@ -61,7 +68,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     loadData();
-  }, [period]);
+  }, [period, operationType]);
 
   const handleFilter = () => {
     loadData();
@@ -80,60 +87,85 @@ export default function AnalyticsPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-8 animate-fade-in">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
-            <BarChart3 className="w-8 h-8" />
+        <div className="animate-slide-up">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-transparent flex items-center gap-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <BarChart3 className="w-7 h-7 text-white" />
+            </div>
             Analytics de Vendas
           </h1>
-          <p className="text-slate-600 mt-1">Análise detalhada de vendas por funcionário</p>
+          <p className="text-slate-600 mt-2 text-lg">Análise detalhada de vendas por funcionário</p>
         </div>
 
         {/* Filters */}
-        <div className="card">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-slate-600" />
-            <h2 className="text-lg font-semibold text-slate-900">Filtros</h2>
+        <div className="card animate-slide-up">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+              <Filter className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">Filtros</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Período</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Período</label>
               <select
                 value={period}
                 onChange={(e) => setPeriod(e.target.value as Period)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="input-field font-semibold"
               >
                 <option value="day">Hoje</option>
                 <option value="week">Esta Semana</option>
                 <option value="month">Este Mês</option>
               </select>
             </div>
+            {userOperationType === "BOTH" && (
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Operação</label>
+                <select
+                  value={operationType}
+                  onChange={(e) => setOperationType(e.target.value as "SALON" | "STUDIO" | "ALL")}
+                  className="input-field font-semibold"
+                >
+                  <option value="ALL">Todas</option>
+                  <option value="SALON">Salon</option>
+                  <option value="STUDIO">Studio</option>
+                </select>
+              </div>
+            )}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Data Inicial</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Data Inicial</label>
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="input-field"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Data Final</label>
+              <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Data Final</label>
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="input-field"
               />
             </div>
             <div className="flex items-end">
               <button
                 onClick={handleFilter}
                 disabled={loading}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Carregando..." : "Aplicar Filtros"}
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Carregando...
+                  </span>
+                ) : (
+                  "Aplicar Filtros"
+                )}
               </button>
             </div>
           </div>
@@ -141,64 +173,77 @@ export default function AnalyticsPage() {
 
         {/* Summary Cards */}
         {salesData && salesDataWithTax && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="card bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-slide-up">
+            <div className="card-gradient from-blue-500 via-blue-600 to-indigo-600 group">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-600">Receita Total</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">
+                <div className="flex-1">
+                  <p className="text-blue-100/90 text-sm font-semibold uppercase tracking-wide mb-2">Receita Total</p>
+                  <p className="text-4xl font-bold text-white drop-shadow-lg mb-1">
                     {formatCurrency(salesData.summary.total_revenue)}
                   </p>
                 </div>
-                <TrendingUp className="w-10 h-10 text-blue-600" />
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 shadow-lg">
+                  <TrendingUp className="w-8 h-8 text-white" />
+                </div>
               </div>
             </div>
-            <div className="card bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <div className="card-gradient from-emerald-500 via-green-600 to-teal-600 group">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-600">Subtotal</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">
+                <div className="flex-1">
+                  <p className="text-emerald-100/90 text-sm font-semibold uppercase tracking-wide mb-2">Subtotal</p>
+                  <p className="text-4xl font-bold text-white drop-shadow-lg mb-1">
                     {formatCurrency(salesDataWithTax.summary.total_subtotal)}
                   </p>
                 </div>
-                <Receipt className="w-10 h-10 text-green-600" />
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 shadow-lg">
+                  <Receipt className="w-8 h-8 text-white" />
+                </div>
               </div>
             </div>
-            <div className="card bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+            <div className="card-gradient from-red-500 via-rose-600 to-pink-600 group">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-600">Imposto Total</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">
+                <div className="flex-1">
+                  <p className="text-red-100/90 text-sm font-semibold uppercase tracking-wide mb-2">Imposto Total</p>
+                  <p className="text-4xl font-bold text-white drop-shadow-lg mb-1">
                     {formatCurrency(salesDataWithTax.summary.total_tax)}
                   </p>
-                  <p className="text-xs text-slate-600 mt-1">
+                  <p className="text-red-100/90 text-xs font-semibold mt-1">
                     {salesDataWithTax.summary.tax_percentage.toFixed(2)}%
                   </p>
                 </div>
-                <Receipt className="w-10 h-10 text-red-600" />
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 shadow-lg">
+                  <Receipt className="w-8 h-8 text-white" />
+                </div>
               </div>
             </div>
-            <div className="card bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+            <div className="card-gradient from-amber-500 via-orange-500 to-orange-600 group">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-600">Total de Vendas</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">
+                <div className="flex-1">
+                  <p className="text-orange-100/90 text-sm font-semibold uppercase tracking-wide mb-2">Total de Vendas</p>
+                  <p className="text-4xl font-bold text-white drop-shadow-lg mb-1">
                     {salesData.summary.total_sales}
                   </p>
                 </div>
-                <BarChart3 className="w-10 h-10 text-orange-600" />
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 shadow-lg">
+                  <BarChart3 className="w-8 h-8 text-white" />
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
           {/* Sales by User */}
-          <div className="card">
-            <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Vendas por Funcionário ({getPeriodLabel(period)})
-            </h2>
+          <div className="card group">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Users className="w-5 h-5 text-white" />
+                </div>
+                Vendas por Funcionário
+              </h2>
+              <span className="text-sm text-slate-500 font-semibold">{getPeriodLabel(period)}</span>
+            </div>
             {loading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -212,26 +257,30 @@ export default function AnalyticsPage() {
                       ? (user.total_revenue / salesData.summary.total_revenue) * 100
                       : 0;
                   return (
-                    <div key={user.user_id} className="border border-slate-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
+                    <div 
+                      key={user.user_id} 
+                      className="border-2 border-slate-200 rounded-xl p-5 bg-gradient-to-r from-white to-slate-50 hover:border-blue-300 hover:shadow-lg transition-all duration-300 animate-fade-in"
+                      style={{ animationDelay: `${index * 0.05}s` }}
+                    >
+                      <div className="flex items-center justify-between mb-3">
                         <div>
-                          <h3 className="font-semibold text-slate-900">{user.full_name}</h3>
-                          <p className="text-sm text-slate-600">@{user.username}</p>
+                          <h3 className="font-bold text-lg text-slate-900">{user.full_name}</h3>
+                          <p className="text-sm text-slate-600 font-medium">@{user.username}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-slate-900">
+                          <p className="text-xl font-bold text-blue-600">
                             {formatCurrency(user.total_revenue)}
                           </p>
-                          <p className="text-sm text-slate-600">{user.total_sales} vendas</p>
+                          <p className="text-sm text-slate-600 font-semibold">{user.total_sales} vendas</p>
                         </div>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2.5 mb-2">
+                      <div className="w-full bg-slate-200 rounded-full h-3 mb-3 shadow-inner">
                         <div
-                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-2.5 rounded-full transition-all"
+                          className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 h-3 rounded-full transition-all duration-500 shadow-lg"
                           style={{ width: `${percentage}%` }}
                         ></div>
                       </div>
-                      <div className="flex justify-between text-xs text-slate-600">
+                      <div className="flex justify-between text-xs text-slate-600 font-semibold">
                         <span>{percentage.toFixed(1)}% da receita total</span>
                         <span>Ticket médio: {formatCurrency(user.avg_sale)}</span>
                       </div>

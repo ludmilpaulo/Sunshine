@@ -102,6 +102,7 @@ class SaleSerializer(serializers.ModelSerializer):
             "cashier",
             "cashier_name",
             "cashier_username",
+            "operation_type",
             "status",
             "subtotal",
             "tax",
