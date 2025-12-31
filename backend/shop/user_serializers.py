@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import UserProfile
 
 User = get_user_model()
 
@@ -43,6 +42,8 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.username
     
     def get_operation_type(self, obj):
+        # Import here to avoid circular import issues
+        from .models import UserProfile
         try:
             profile = obj.profile
             return profile.operation_type
@@ -71,6 +72,9 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         ]
 
     def update(self, instance, validated_data):
+        # Import here to avoid circular import issues
+        from .models import UserProfile
+        
         operation_type = validated_data.pop("operation_type", None)
         user = super().update(instance, validated_data)
         
@@ -130,6 +134,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
         user.save()
         
         # Create or update user profile
+        # Import here to avoid circular import issues
+        from .models import UserProfile
         UserProfile.objects.update_or_create(
             user=user,
             defaults={"operation_type": operation_type}
