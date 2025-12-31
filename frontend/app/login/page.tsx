@@ -30,7 +30,19 @@ export default function LoginPage() {
         router.push("/pos");
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || "Credenciais inválidas");
+      // Get detailed error message from backend
+      const errorMessage = error.response?.data?.detail || "Erro ao fazer login. Tente novamente.";
+      toast.error(errorMessage, {
+        duration: 5000,
+        style: {
+          background: '#ef4444',
+          color: '#fff',
+          padding: '16px',
+          borderRadius: '8px',
+          fontSize: '14px',
+          fontWeight: '500',
+        },
+      });
     } finally {
       setLoading(false);
     }
