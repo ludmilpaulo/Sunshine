@@ -16,6 +16,8 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   let isScanning = false;
   let lastScannedCode = "";
   let lastScannedTime = 0;
+  let lastKeyProcessed = ""; // Track last key to prevent keydown+keypress duplication
+  let lastKeyTime = 0; // Track time of last key
   const TIMEOUT_MS = options?.timeout || 200; // Increased timeout for slower scanners
   const MIN_LENGTH = options?.minLength || 3;
   const MAX_LENGTH = 50; // Maximum reasonable barcode length
@@ -23,6 +25,7 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   const STRIP_PREFIX = options?.stripPrefix ?? true;
   const STRIP_SUFFIX = options?.stripSuffix ?? true;
   const DUPLICATE_THRESHOLD = 2000; // Ignore same code if scanned within 2 seconds
+  const KEY_DUPLICATE_THRESHOLD = 50; // Ignore duplicate key events within 50ms
 
   // Common scanner prefixes/suffixes to strip
   const PREFIXES = ["STX", "\x02", "GS", "\x1D"];
@@ -157,6 +160,8 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
     isScanning = false;
     lastScannedCode = normalizedCode;
     lastScannedTime = Date.now();
+    lastKeyProcessed = ""; // Reset after processing
+    lastKeyTime = 0; // Reset after processing
     
     if (DEBUG) {
       console.log("[Barcode] ✅ Valid barcode received:", normalizedCode, "Length:", normalizedCode.length, "Original:", code);
@@ -259,7 +264,19 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
       // Accept alphanumeric and common barcode characters
       // Some scanners send special characters, we'll filter them but be more permissive
       if (/^[\w\-_\.\s]+$/.test(e.key) || /^[0-9]+$/.test(e.key)) {
+        // Prevent duplicate key events (keydown + keypress both fire for same key)
+        const timeSinceLastKeyEvent = now - lastKeyTime;
+        if (e.key === lastKeyProcessed && timeSinceLastKeyEvent < KEY_DUPLICATE_THRESHOLD) {
+          if (DEBUG) {
+            console.log("[Barcode] ⏭️ Skipping duplicate keydown event:", e.key, "Time:", timeSinceLastKeyEvent);
+          }
+          return; // Skip this duplicate event
+        }
+        
         buffer += e.key;
+        lastKeyProcessed = e.key;
+        lastKeyTime = now;
+        
         if (DEBUG) {
           console.log("[Barcode] Added char:", e.key, "Buffer:", buffer, "Time since last:", timeSinceLastKey);
         }
@@ -272,11 +289,23 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   };
 
   // Also listen to keypress for better compatibility
+  // NOTE: We now handle characters in keydown, so keypress is mainly for timing detection
+  // We should NOT add to buffer here to avoid duplication
   const onKeyPress = (e: KeyboardEvent) => {
     // Some scanners may trigger keypress instead of keydown
+    // But we've already handled the character in keydown, so we just update timing here
     if (e.key.length === 1 && (/^[\w\-_\.\s]+$/.test(e.key) || /^[0-9]+$/.test(e.key))) {
       const now = Date.now();
       const timeSinceLastKey = now - lastTime;
+      
+      // Prevent duplicate processing - if we just processed this key in keydown, skip
+      const timeSinceLastKeyEvent = now - lastKeyTime;
+      if (e.key === lastKeyProcessed && timeSinceLastKeyEvent < KEY_DUPLICATE_THRESHOLD) {
+        if (DEBUG) {
+          console.log("[Barcode] ⏭️ KeyPress: Skipping duplicate key event:", e.key);
+        }
+        return; // Skip - already processed in keydown
+      }
       
       if (timeSinceLastKey > TIMEOUT_MS) {
         buffer = "";
@@ -286,9 +315,14 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
       }
       
       lastTime = now;
-      buffer += e.key;
-      if (DEBUG) {
-        console.log("[Barcode] KeyPress - Added char:", e.key, "Buffer:", buffer, "Time:", timeSinceLastKey);
+      // Only add to buffer if NOT already added by keydown (fallback for scanners that only send keypress)
+      if (timeSinceLastKeyEvent >= KEY_DUPLICATE_THRESHOLD || e.key !== lastKeyProcessed) {
+        buffer += e.key;
+        lastKeyProcessed = e.key;
+        lastKeyTime = now;
+        if (DEBUG) {
+          console.log("[Barcode] KeyPress - Added char (fallback):", e.key, "Buffer:", buffer, "Time:", timeSinceLastKey);
+        }
       }
     }
   };
@@ -309,12 +343,10 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
 
   // Listen to both events for maximum compatibility
   // Use capture phase (true) to intercept events before they reach input fields
+  // NOTE: Only add to document to avoid duplicate listeners (window + document = duplication)
   const eventOptions = { capture: true, passive: false };
   
-  window.addEventListener("keydown", onKeyDown, eventOptions);
-  window.addEventListener("keypress", onKeyPress, eventOptions);
-  
-  // Also add to document for better coverage
+  // Only add to document, not both window and document (prevents duplication)
   document.addEventListener("keydown", onKeyDown, eventOptions);
   document.addEventListener("keypress", onKeyPress, eventOptions);
   document.addEventListener("input", onInput, eventOptions);
@@ -329,8 +361,6 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   }
   
   return () => {
-    window.removeEventListener("keydown", onKeyDown, eventOptions);
-    window.removeEventListener("keypress", onKeyPress, eventOptions);
     document.removeEventListener("keydown", onKeyDown, eventOptions);
     document.removeEventListener("keypress", onKeyPress, eventOptions);
     document.removeEventListener("input", onInput, eventOptions);
