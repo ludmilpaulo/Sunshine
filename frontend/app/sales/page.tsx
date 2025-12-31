@@ -102,7 +102,7 @@ export default function SalesPage() {
                   <tr>
                     <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Venda #</th>
                     <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Caixa</th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Itens</th>
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-slate-700">Produtos</th>
                     <th className="text-right py-4 px-6 text-sm font-semibold text-slate-700">Subtotal</th>
                     <th className="text-right py-4 px-6 text-sm font-semibold text-slate-700">Imposto</th>
                     <th className="text-right py-4 px-6 text-sm font-semibold text-slate-700">Total</th>
@@ -123,7 +123,24 @@ export default function SalesPage() {
                           <span className="font-mono font-semibold text-slate-900">{sale.number}</span>
                         </td>
                         <td className="py-4 px-6 text-slate-600">{sale.cashier_name || sale.cashier_username}</td>
-                        <td className="py-4 px-6 text-slate-600">{sale.items?.length || 0} itens</td>
+                        <td className="py-4 px-6 text-slate-600">
+                          <div className="space-y-1">
+                            {sale.items && sale.items.length > 0 ? (
+                              sale.items.map((item: any, index: number) => (
+                                <div key={item.id || index} className="text-sm">
+                                  <span className="font-medium text-slate-900">
+                                    {item.product_name || item.product?.name || "Produto desconhecido"}
+                                  </span>
+                                  <span className="text-slate-500 ml-2">
+                                    (x{item.qty})
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-slate-400">Nenhum item</span>
+                            )}
+                          </div>
+                        </td>
                         <td className="py-4 px-6 text-right text-slate-600">
                           {formatCurrency(parseFloat(sale.subtotal))}
                         </td>
