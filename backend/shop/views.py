@@ -249,34 +249,57 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         # Strategy 9: Try to find products where scanned code is a prefix/suffix of stored code
         # Handles cases like: scanned "5491472" (7 digits) matching stored "54491472" (8 digits)
+        # Also handles: scanned "74576080578" (11 digits) matching stored "745760805778" (12 digits)
         try:
             if len(normalized_search) >= 6:  # Allow codes as short as 6 digits
                 all_products = Product.objects.select_related("inventory").all()
                 for product in all_products:
                     normalized_stored = normalize_barcode_for_search(product.barcode)
                     if normalized_stored and len(normalized_stored) >= len(normalized_search):
-                        # Check if scanned code matches the start or end of stored code
-                        # Allow for 1-2 digit difference (common in barcode variations)
                         stored_len = len(normalized_stored)
                         search_len = len(normalized_search)
                         
-                        # If stored code starts with scanned code (e.g., "54491472" starts with "5491472" - missing first digit)
-                        if normalized_stored.startswith(normalized_search) or normalized_stored.endswith(normalized_search):
+                        # Priority 1: If stored code starts with scanned code (scanned is prefix)
+                        # e.g., "745760805778" starts with "74576080578" (missing last digit)
+                        if normalized_stored.startswith(normalized_search):
                             if abs(stored_len - search_len) <= 2:
-                                logger.info(f"Found product via prefix/suffix match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
+                                logger.info(f"Found product via prefix match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
                                 return Response(ProductSerializer(product).data)
                         
-                        # Also check if scanned code matches stored code with 1-2 digits removed from start/end
-                        # e.g., "5491472" matches "54491472" (missing '4' at start)
+                        # Priority 2: If stored code ends with scanned code (scanned is suffix)
+                        # e.g., "54491472" ends with "5491472" (missing first digit)
+                        if normalized_stored.endswith(normalized_search):
+                            if abs(stored_len - search_len) <= 2:
+                                logger.info(f"Found product via suffix match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
+                                return Response(ProductSerializer(product).data)
+                        
+                        # Priority 3: If stored code is longer by 1-2 digits, check if scanned matches when we remove digits from stored
                         if stored_len == search_len + 1 or stored_len == search_len + 2:
                             # Try removing first digit(s) from stored
-                            if normalized_stored[1:] == normalized_search or normalized_stored[2:] == normalized_search:
+                            if normalized_stored[1:] == normalized_search or (stored_len >= search_len + 2 and normalized_stored[2:] == normalized_search):
                                 logger.info(f"Found product via stored-with-prefix match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
                                 return Response(ProductSerializer(product).data)
                             # Try removing last digit(s) from stored
-                            if normalized_stored[:-1] == normalized_search or normalized_stored[:-2] == normalized_search:
+                            if normalized_stored[:-1] == normalized_search or (stored_len >= search_len + 2 and normalized_stored[:-2] == normalized_search):
                                 logger.info(f"Found product via stored-with-suffix match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
                                 return Response(ProductSerializer(product).data)
+                        
+                        # Priority 4: Check if scanned code matches stored code with 1 digit difference
+                        # This handles cases where one digit is missing or extra
+                        if abs(stored_len - search_len) == 1:
+                            # Check if all digits match except one position
+                            # For stored longer by 1: check if removing any single digit from stored equals scanned
+                            if stored_len > search_len:
+                                for i in range(stored_len):
+                                    if normalized_stored[:i] + normalized_stored[i+1:] == normalized_search:
+                                        logger.info(f"Found product via single-digit-difference match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
+                                        return Response(ProductSerializer(product).data)
+                            # For scanned longer by 1: check if removing any single digit from scanned equals stored
+                            elif search_len > stored_len:
+                                for i in range(search_len):
+                                    if normalized_search[:i] + normalized_search[i+1:] == normalized_stored:
+                                        logger.info(f"Found product via single-digit-difference match: {product.name} (stored: '{product.barcode}' -> normalized: '{normalized_stored}', search: '{normalized_search}')")
+                                        return Response(ProductSerializer(product).data)
         except Exception as e:
             logger.error(f"Error in prefix/suffix search: {e}")
         
