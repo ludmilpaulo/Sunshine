@@ -51,9 +51,33 @@ async function loadUsbModule() {
 }
 
 const app = express();
-// Allow CORS from localhost (for development)
+// Allow CORS from localhost (for development) and production domains
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "https://sunshinebar.vercel.app",
+  process.env.FRONTEND_URL || "",
+  process.env.CORS_ORIGIN || "",
+].filter(Boolean); // Remove empty strings
+
 app.use(cors({ 
-  origin: ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      // In production, be more permissive if CORS_ORIGIN_ALLOW_ALL is set
+      if (process.env.CORS_ORIGIN_ALLOW_ALL === "true") {
+        callback(null, true);
+      } else {
+        console.warn(`⚠️  CORS blocked origin: ${origin}`);
+        callback(new Error("Not allowed by CORS"));
+      }
+    }
+  },
   credentials: true
 }));
 app.use(express.json({ limit: "1mb" }));

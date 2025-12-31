@@ -88,7 +88,19 @@ export default function TestPrinterPage() {
   const testDiscovery = async () => {
     setLoading(true);
     try {
-      const printBridgeUrl = process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL || "http://localhost:3333";
+      const getPrintBridgeUrl = () => {
+        if (process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL) {
+          return process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL;
+        }
+        const isProduction = typeof window !== "undefined" && 
+          (window.location.hostname.includes("vercel.app") || 
+           window.location.hostname.includes("sunshinebar"));
+        if (isProduction) {
+          return "http://localhost:3333";
+        }
+        return "http://localhost:3333";
+      };
+      const printBridgeUrl = getPrintBridgeUrl();
       const response = await fetch(`${printBridgeUrl}/discover`);
       if (response.ok) {
         const data = await response.json();

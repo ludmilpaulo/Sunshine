@@ -261,9 +261,37 @@ export const stockApi = {
 };
 
 // Print
+// Helper function to get Print Bridge URL based on environment
+const getPrintBridgeUrl = (): string => {
+  // Check if we're in production (Vercel)
+  const isProduction = typeof window !== "undefined" && 
+    (window.location.hostname.includes("vercel.app") || 
+     window.location.hostname.includes("sunshinebar"));
+  
+  // Use environment variable if set, otherwise detect automatically
+  if (process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL) {
+    return process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL;
+  }
+  
+  // Auto-detect: if in production, try to use same hostname with port 3333
+  if (isProduction && typeof window !== "undefined") {
+    // Try to use the same hostname but with port 3333
+    // This assumes Print Bridge is running on the same server
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    // For Vercel, you might need to set a custom domain or use a separate server
+    // Default to localhost for now, but log a warning
+    console.warn("⚠️ Print Bridge URL not configured. Using default localhost. Please set NEXT_PUBLIC_PRINT_BRIDGE_URL in Vercel.");
+    return "http://localhost:3333";
+  }
+  
+  // Development: use localhost
+  return "http://localhost:3333";
+};
+
 export const printApi = {
   listPrinters: async () => {
-    const printBridgeUrl = process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL || "http://localhost:3333";
+    const printBridgeUrl = getPrintBridgeUrl();
     const response = await fetch(`${printBridgeUrl}/printers`);
     if (!response.ok) {
       throw new Error("Failed to list printers");
@@ -279,7 +307,7 @@ export const printApi = {
       usbPrinterName?: string;
     }
   ) => {
-    const printBridgeUrl = process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL || "http://localhost:3333";
+    const printBridgeUrl = getPrintBridgeUrl();
     
     // Get printer config from env or use provided
     const lanIp = printerConfig?.lanIp || process.env.NEXT_PUBLIC_PRINTER_LAN_IP;
