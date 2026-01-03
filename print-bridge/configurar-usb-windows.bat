@@ -134,7 +134,7 @@ echo    - Pare o processo atual (Ctrl+C)
 echo    - Execute: npm run dev
 echo.
 echo Para executar como serviço do Windows (produção):
-echo - Consulte: SOLUCAO_IMPRESSORA_WINDOWS10.md
+echo - Consulte: WINDOWS10_TROUBLESHOOTING.md
 echo.
 pause
 

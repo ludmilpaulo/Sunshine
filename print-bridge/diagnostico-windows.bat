@@ -79,7 +79,7 @@ echo DIAGNÓSTICO CONCLUÍDO
 echo ========================================
 echo.
 echo Se houver erros, siga as instruções acima.
-echo Para mais ajuda, consulte: SOLUCAO_IMPRESSORA_WINDOWS10.md
+echo Para mais ajuda, consulte: WINDOWS10_TROUBLESHOOTING.md
 echo.
 pause
 

@@ -172,16 +172,48 @@ app.get("/printers", async (_req, res) => {
       const usbPrinters = useLpFallback 
         ? await listPrinters() 
         : listPrinters();
+      
+      // Import getDefaultPrinterName if available
+      let defaultPrinterName: string | null = null;
+      try {
+        const usbModule = await import("./usb.js");
+        if (usbModule.getDefaultPrinterName) {
+          defaultPrinterName = usbModule.getDefaultPrinterName();
+        }
+      } catch {
+        // Ignore if not available
+      }
+      
       printers.push(...usbPrinters.map((p: any) => ({
         ...p,
         type: "USB",
+        // Mark default printer explicitly (useful for Windows)
+        isDefault: defaultPrinterName ? String(p.name) === defaultPrinterName : p.isDefault,
       })));
+      
+      // Add helpful message for Windows
+      if (process.platform === "win32" && usbPrinters.length > 0) {
+        console.log(`📋 Found ${usbPrinters.length} USB printer(s) on Windows`);
+        if (defaultPrinterName) {
+          console.log(`   Default printer: "${defaultPrinterName}"`);
+        }
+      }
     } catch (e: any) {
       console.warn("Failed to list USB printers:", e.message);
+      if (process.platform === "win32") {
+        console.warn("   Windows troubleshooting: Ensure printer is installed and visible in Control Panel → Devices and Printers");
+      }
     }
   }
   
-  return res.json({ printers });
+  return res.json({ 
+    printers,
+    platform: process.platform,
+    // Add helpful hint for Windows
+    ...(process.platform === "win32" && {
+      hint: "On Windows 10, ensure printer name matches exactly (case-sensitive). Use the exact name shown above."
+    })
+  });
 });
 
 // Auto-discovery endpoint
@@ -256,8 +288,22 @@ app.post("/print", async (req, res) => {
           hint: "USB printing module is not available. Use LAN mode or install USB module.",
         });
       }
-      await sendToUsbRaw(data, { printerName: usbName });
-      return res.json({ ok: true, used: "USB" });
+      try {
+        await sendToUsbRaw(data, { printerName: usbName });
+        return res.json({ ok: true, used: "USB" });
+      } catch (usbError: any) {
+        console.error("USB print failed:", usbError.message);
+        // Provide detailed error for Windows troubleshooting
+        const isWindows = process.platform === "win32";
+        return res.status(500).json({
+          detail: "USB_PRINT_FAILED",
+          error: usbError.message,
+          platform: process.platform,
+          hint: isWindows
+            ? "Windows 10 troubleshooting:\n1. Verify printer name matches exactly (case-sensitive)\n2. Check printer is online in Windows Settings\n3. Try setting printer as default\n4. Test print from Windows (Print Test Page)\n5. Ensure printer driver is properly installed\n6. Call GET /printers to see available printer names"
+            : "Call GET /printers to verify printer name and status.",
+        });
+      }
     }
 
     // AUTO mode: try LAN first, then USB fallback
@@ -291,11 +337,15 @@ app.post("/print", async (req, res) => {
       await sendToUsbRaw(data, { printerName: usbName });
       return res.json({ ok: true, used: "USB" });
     } catch (usbError: any) {
-      console.error("USB print also failed:", usbError);
+      console.error("USB print also failed:", usbError.message);
+      const isWindows = process.platform === "win32";
       return res.status(500).json({
         detail: "BOTH_LAN_AND_USB_FAILED",
         error: usbError.message,
-        hint: "Check printer connection and name.",
+        platform: process.platform,
+        hint: isWindows
+          ? "Windows 10 troubleshooting:\n1. Verify printer name matches exactly (case-sensitive)\n2. Check printer is online in Windows Settings\n3. Try setting printer as default\n4. Test print from Windows (Print Test Page)\n5. Ensure printer driver is properly installed\n6. Call GET /printers to see available printer names"
+          : "Check printer connection and name. Call GET /printers to verify.",
       });
     }
   } catch (e: any) {
