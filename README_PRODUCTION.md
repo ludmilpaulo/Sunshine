@@ -20,6 +20,7 @@ Todos os componentes estão configurados e prontos para uso em produção.
 - **URL**: `http://localhost:3333`
 - **Status**: ✅ Código compilado e pronto
 - **CORS**: ✅ Aceita requisições de `https://sunshinebar.vercel.app`
+- **Recomendação**: ⭐ **Use LAN (TCP/IP)** - Mais confiável e não precisa de drivers
 
 ## 🎯 Como Funciona
 
