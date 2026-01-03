@@ -263,26 +263,24 @@ export const stockApi = {
 // Print
 // Helper function to get Print Bridge URL based on environment
 const getPrintBridgeUrl = (): string | null => {
-  // Always use environment variable if set (this is the correct way for production)
+  // Priority 1: Use environment variable if set (for cloud-deployed Print Bridge)
   if (process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL) {
     return process.env.NEXT_PUBLIC_PRINT_BRIDGE_URL;
   }
   
-  // Check if we're in production (not localhost)
-  const isProduction = typeof window !== "undefined" && 
-    window.location.hostname !== "localhost" &&
-    window.location.hostname !== "127.0.0.1" &&
-    !window.location.hostname.startsWith("192.168.") &&
-    !window.location.hostname.startsWith("10.") &&
-    !window.location.hostname.includes(":3000");
+  // Priority 2: Always try localhost:3333 first
+  // This works because:
+  // - The frontend code runs in the browser (client-side)
+  // - If Print Bridge is running on the client's machine, localhost:3333 will work
+  // - This is the most common scenario: Print Bridge runs locally on the cashier PC
+  // - Even if frontend is deployed on Vercel, it can still connect to localhost on the client machine
   
-  // In production without URL configured, return null (printing will be skipped)
-  if (isProduction) {
-    console.warn("⚠️ Print Bridge URL not configured. Printing will be disabled. Set NEXT_PUBLIC_PRINT_BRIDGE_URL in Vercel environment variables.");
-    return null;
+  if (typeof window !== "undefined") {
+    console.log("🔍 Print Bridge: Trying localhost:3333 (Print Bridge should run on client machine)");
+    console.log("   Frontend hostname:", window.location.hostname);
+    console.log("   Note: Print Bridge must be running on the same machine as the browser");
   }
   
-  // Development: use localhost
   return "http://localhost:3333";
 };
 
@@ -351,9 +349,27 @@ export const printApi = {
       return response.json();
     } catch (error: any) {
       // Check if it's a network error (Print Bridge not running)
-      if (error.message === "Failed to fetch" || error.name === "TypeError" || error.message?.includes("CORS")) {
+      if (error.message === "Failed to fetch" || error.name === "TypeError") {
+        // More specific error message for production
+        const isLocalhost = printBridgeUrl?.includes("localhost") || printBridgeUrl?.includes("127.0.0.1");
+        if (isLocalhost) {
+          throw new Error(
+            `Print Bridge não está acessível em ${printBridgeUrl}. ` +
+            `Verifique se o Print Bridge está rodando na máquina local. ` +
+            `Execute: cd print-bridge && node dist/index.js`
+          );
+        } else {
+          throw new Error(
+            `Print Bridge não está acessível em ${printBridgeUrl}. ` +
+            `Verifique se o serviço está rodando e acessível.`
+          );
+        }
+      }
+      // Check for CORS errors
+      if (error.message?.includes("CORS") || error.message?.includes("blocked")) {
         throw new Error(
-          `Print Bridge não está acessível em ${printBridgeUrl}. Verifique se o serviço está rodando e acessível.`
+          `Erro de CORS ao conectar ao Print Bridge. ` +
+          `Verifique se o Print Bridge está configurado para aceitar requisições de ${window.location.origin}`
         );
       }
       throw error;

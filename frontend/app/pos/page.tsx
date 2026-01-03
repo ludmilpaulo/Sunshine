@@ -195,13 +195,24 @@ export default function POSPage() {
             errorMessage.includes("não está acessível") ||
             errorMessage.includes("CORS")) {
           // Print Bridge not configured or not accessible - show info message
-          toast(
-            "Venda finalizada! Impressão não disponível (Print Bridge não configurado).",
-            { 
-              icon: "ℹ️",
-              duration: 5000 
-            }
-          );
+          const isLocalhostError = errorMessage.includes("localhost") || errorMessage.includes("127.0.0.1");
+          if (isLocalhostError) {
+            toast(
+              "Venda finalizada! Impressão não disponível. Verifique se o Print Bridge está rodando na máquina local.",
+              { 
+                icon: "ℹ️",
+                duration: 6000 
+              }
+            );
+          } else {
+            toast(
+              "Venda finalizada! Impressão não disponível (Print Bridge não configurado).",
+              { 
+                icon: "ℹ️",
+                duration: 5000 
+              }
+            );
+          }
         } else {
           // Other printing errors - show warning but don't block the sale
           toast.error(
