@@ -89,13 +89,19 @@ npm install
 # 3. Compilar
 npm run build
 
-# 4. Criar arquivo .env
+# 4. Descobrir impressora (LAN recomendado)
+chmod +x discover-printer.sh
+./discover-printer.sh
+# OU descobrir manualmente o IP da impressora
+
+# 5. Criar arquivo .env
 cat > .env << EOF
 PORT=3333
-PRINTER_USB_NAME=Nome Exato da Impressora
-# ou para LAN:
-# PRINTER_LAN_IP=192.168.1.50
-# PRINTER_LAN_PORT=9100
+# ⭐ LAN (Recomendado - Mais confiável)
+PRINTER_LAN_IP=192.168.1.50
+PRINTER_LAN_PORT=9100
+# OU USB (alternativa)
+# PRINTER_USB_NAME=Nome Exato da Impressora
 EOF
 
 # 5. Descobrir nome da impressora
