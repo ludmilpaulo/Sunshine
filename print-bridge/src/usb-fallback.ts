@@ -50,6 +50,21 @@ export async function sendToUsbViaLp(
   }
 }
 
+export async function getDefaultPrinterNameViaLp(): Promise<string | null> {
+  try {
+    const { stdout } = await execAsync("lpstat -d");
+    // lpstat -d outputs: "system default destination: <printer-name>"
+    const match = stdout.match(/system default destination:\s*(.+)/);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+    return null;
+  } catch (e: any) {
+    console.error("Failed to get default printer via lp:", e.message);
+    return null;
+  }
+}
+
 export async function listPrintersViaLp(): Promise<
   { name: string; status?: number; isDefault?: boolean }[]
 > {

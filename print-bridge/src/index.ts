@@ -65,6 +65,12 @@ const allowedOrigins = [
 const additionalOrigins = (process.env.CORS_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
 allowedOrigins.push(...additionalOrigins);
 
+// In production, be more permissive if CORS_ORIGIN_ALLOW_ALL is set
+// This allows the frontend (deployed on Vercel) to access Print Bridge (running on local PC)
+if (process.env.CORS_ORIGIN_ALLOW_ALL === "true") {
+  console.log("⚠️  CORS_ORIGIN_ALLOW_ALL is enabled - allowing all origins");
+}
+
 app.use(cors({ 
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, Postman, etc.)
@@ -229,6 +235,35 @@ app.get("/discover", async (_req, res) => {
   }
 });
 
+// Helper function to get the default printer name
+async function getDefaultPrinterName(): Promise<string | null> {
+  await loadUsbModule();
+  
+  // For macOS (lp fallback)
+  if (useLpFallback) {
+    try {
+      const usbFallback = await import("./usb-fallback.js");
+      if (usbFallback.getDefaultPrinterNameViaLp) {
+        return await usbFallback.getDefaultPrinterNameViaLp();
+      }
+    } catch (e: any) {
+      console.warn("Failed to get default printer via lp:", e.message);
+    }
+  }
+  
+  // For Windows/Linux (native module)
+  try {
+    const usbModule = await import("./usb.js");
+    if (usbModule.getDefaultPrinterName) {
+      return usbModule.getDefaultPrinterName();
+    }
+  } catch (e: any) {
+    // Ignore if module not available
+  }
+  
+  return null;
+}
+
 app.post("/print", async (req, res) => {
   const parsed = PrintSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -263,7 +298,16 @@ app.post("/print", async (req, res) => {
   }
   
   const lanPort = body.lan?.port ?? Number(process.env.PRINTER_LAN_PORT ?? "9100");
-  const usbName = body.usb?.printerName ?? process.env.PRINTER_USB_NAME;
+  let usbName = body.usb?.printerName ?? process.env.PRINTER_USB_NAME;
+  
+  // If no USB printer name is provided, try to use the default system printer
+  if (!usbName) {
+    const defaultPrinterName = await getDefaultPrinterName();
+    if (defaultPrinterName) {
+      usbName = defaultPrinterName;
+      console.log(`Using default system printer: "${defaultPrinterName}"`);
+    }
+  }
 
   try {
     if (body.mode === "LAN") {
@@ -279,7 +323,7 @@ app.post("/print", async (req, res) => {
       if (!usbName) {
         return res.status(400).json({
           detail: "USB_PRINTER_NAME_REQUIRED",
-          hint: "Call GET /printers to find the printer name, then set usb.printerName or PRINTER_USB_NAME.",
+          hint: "No printer name provided and no default system printer found. Call GET /printers to find the printer name, then set usb.printerName or PRINTER_USB_NAME.",
         });
       }
       if (!sendToUsbRaw) {
@@ -326,10 +370,19 @@ app.post("/print", async (req, res) => {
       });
     }
     
+    // If still no USB printer name, try to get default system printer
+    if (!usbName) {
+      const defaultPrinterName = await getDefaultPrinterName();
+      if (defaultPrinterName) {
+        usbName = defaultPrinterName;
+        console.log(`Using default system printer for fallback: "${defaultPrinterName}"`);
+      }
+    }
+    
     if (!usbName) {
       return res.status(503).json({
         detail: "LAN_FAILED_AND_USB_PRINTER_NOT_SET",
-        hint: "LAN failed. Call GET /printers to find the printer name, then set usb.printerName or PRINTER_USB_NAME.",
+        hint: "LAN failed and no USB printer name provided. No default system printer found. Call GET /printers to find the printer name, then set usb.printerName or PRINTER_USB_NAME.",
       });
     }
 
