@@ -505,29 +505,56 @@ export default function POSPage() {
                 <div>
                   <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
                     <Printer className="w-5 h-5 text-blue-600" />
-                    Instalação Rápida
+                    Passo 1: Obter a Pasta do Projeto
+                  </h3>
+                  
+                  <div className="space-y-3 mb-4">
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                      <p className="text-sm font-semibold text-slate-900 mb-2">Opção A: Usando Git (Recomendado)</p>
+                      <InstallCommand 
+                        title="Clonar repositório"
+                        command="git clone https://github.com/ludmilpaulo/Sunshine.git && cd Sunshine/print-bridge"
+                      />
+                    </div>
+                    
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                      <p className="text-sm font-semibold text-slate-900 mb-2">Opção B: Download ZIP</p>
+                      <p className="text-xs text-slate-600 mb-2">
+                        1. Acesse: <a href="https://github.com/ludmilpaulo/Sunshine" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">github.com/ludmilpaulo/Sunshine</a><br/>
+                        2. Clique em "Code" → "Download ZIP"<br/>
+                        3. Extraia o arquivo ZIP<br/>
+                        4. Navegue até: <code className="bg-white px-1 py-0.5 rounded text-xs">Sunshine-main/print-bridge</code>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4">
+                  <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <Printer className="w-5 h-5 text-blue-600" />
+                    Passo 2: Instalar Print Bridge
                   </h3>
                   
                   <div className="space-y-3">
                     <InstallCommand 
                       title="macOS / Linux"
-                      command="cd print-bridge && chmod +x QUICK_INSTALL.sh && ./QUICK_INSTALL.sh"
+                      command="chmod +x QUICK_INSTALL.sh && ./QUICK_INSTALL.sh"
                     />
                     <InstallCommand 
                       title="Windows (PowerShell)"
-                      command="cd print-bridge && .\\install-service-windows.bat"
+                      command=".\\install-service-windows.bat"
                     />
                   </div>
                 </div>
 
                 <div className="border-t border-slate-200 pt-4">
-                  <h4 className="font-semibold text-slate-900 mb-2">Passos Manuais:</h4>
+                  <h4 className="font-semibold text-slate-900 mb-2">Passos Detalhados:</h4>
                   <ol className="list-decimal list-inside space-y-2 text-sm text-slate-700">
-                    <li>Abra o Terminal (macOS/Linux) ou PowerShell (Windows)</li>
-                    <li>Navegue até a pasta do projeto: <code className="bg-slate-100 px-2 py-1 rounded">cd print-bridge</code></li>
-                    <li>Execute o script de instalação (veja comandos acima)</li>
-                    <li>Aguarde a instalação concluir</li>
-                    <li>Feche este modal e tente novamente</li>
+                    <li><strong>Obter o código:</strong> Use Git (Opção A) ou baixe ZIP (Opção B)</li>
+                    <li><strong>Abrir Terminal:</strong> Terminal (macOS/Linux) ou PowerShell (Windows)</li>
+                    <li><strong>Navegar até a pasta:</strong> <code className="bg-slate-100 px-2 py-1 rounded text-xs">cd Sunshine/print-bridge</code> (ou <code className="bg-slate-100 px-2 py-1 rounded text-xs">cd Sunshine-main/print-bridge</code> se baixou ZIP)</li>
+                    <li><strong>Executar instalação:</strong> Use os comandos acima (copie e cole)</li>
+                    <li><strong>Verificar:</strong> Clique em "Verificar Novamente" quando terminar</li>
                   </ol>
                 </div>
 
