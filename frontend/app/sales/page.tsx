@@ -66,7 +66,22 @@ export default function SalesPage() {
         undefined,
         selectedUserId
       );
-      setSales(data.results || data);
+      const salesList = data.results || data;
+      setSales(salesList);
+      
+      // Alert if user selected but no sales found
+      if (selectedUserId && salesList.length === 0) {
+        const selectedUser = users.find(u => u.id === selectedUserId);
+        const userName = selectedUser?.full_name || selectedUser?.username || "o usuário selecionado";
+        const periodText = period === "day" ? "hoje" : period === "week" ? "esta semana" : period === "month" ? "este mês" : "no período selecionado";
+        toast(
+          `${userName} não realizou nenhuma venda ${periodText}.`,
+          { 
+            icon: "ℹ️",
+            duration: 5000 
+          }
+        );
+      }
     } catch (error) {
       toast.error("Falha ao carregar vendas");
     } finally {
