@@ -6,13 +6,15 @@ import { useCartStore } from "@/lib/store";
 import { productsApi, salesApi, printApi, authApi } from "@/lib/api";
 import { attachBarcodeCapture } from "@/lib/barcodeCapture";
 import toast from "react-hot-toast";
-import { ShoppingCart, Plus, Minus, Trash2, CreditCard, DollarSign, Receipt } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, CreditCard, DollarSign, Receipt, Printer, Copy, Check, AlertTriangle } from "lucide-react";
 
 export default function POSPage() {
   const { items, addItem, removeItem, updateQty, clear, getSubtotal, getTax, getTotal } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showPrintBridgeModal, setShowPrintBridgeModal] = useState(false);
+  const [printBridgeStatus, setPrintBridgeStatus] = useState<"checking" | "running" | "not-running" | "unknown">("checking");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [userOperationType, setUserOperationType] = useState<"SHOP" | "SALON" | "STUDIO" | "BOTH">("SHOP");
@@ -114,6 +116,22 @@ export default function POSPage() {
       toast.error("Carrinho vazio");
       return;
     }
+
+    // Check Print Bridge status before checkout
+    try {
+      const health = await printApi.checkHealth();
+      if (!health.ok) {
+        setPrintBridgeStatus("not-running");
+        setShowPrintBridgeModal(true);
+        return;
+      }
+      setPrintBridgeStatus("running");
+    } catch (error) {
+      setPrintBridgeStatus("not-running");
+      setShowPrintBridgeModal(true);
+      return;
+    }
+
     setShowPaymentModal(true);
     setPaymentAmount(getTotal().toFixed(2));
   };
@@ -252,6 +270,49 @@ export default function POSPage() {
       style: "currency",
       currency: "AOA",
     }).format(amount);
+  };
+
+  // Install Command Component
+  const InstallCommand = ({ title, command }: { title: string; command: string }) => {
+    const [copied, setCopied] = useState(false);
+    
+    const copyToClipboard = async () => {
+      try {
+        await navigator.clipboard.writeText(command);
+        setCopied(true);
+        toast.success("Comando copiado!");
+        setTimeout(() => setCopied(false), 2000);
+      } catch (error) {
+        toast.error("Erro ao copiar comando");
+      }
+    };
+
+    return (
+      <div className="border border-slate-200 rounded-lg p-3 bg-slate-50">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-semibold text-slate-700">{title}</span>
+          <button
+            onClick={copyToClipboard}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+          >
+            {copied ? (
+              <>
+                <Check className="w-4 h-4 text-green-600" />
+                <span className="text-green-600">Copiado!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4 text-slate-600" />
+                <span className="text-slate-600">Copiar</span>
+              </>
+            )}
+          </button>
+        </div>
+        <code className="text-sm text-slate-900 bg-white px-3 py-2 rounded border border-slate-200 block break-all">
+          {command}
+        </code>
+      </div>
+    );
   };
 
   return (
@@ -416,6 +477,100 @@ export default function POSPage() {
       </div>
 
       {/* Payment Modal */}
+      {/* Print Bridge Installation Modal */}
+      {showPrintBridgeModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-8 animate-slide-up border border-slate-200 max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-amber-50 to-orange-50 rounded-t-2xl flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">Print Bridge Não Está Rodando</h2>
+                  <p className="text-slate-600 mt-1">Instale o Print Bridge para imprimir recibos automaticamente</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-900">
+                    <strong>Importante:</strong> O Print Bridge precisa ser instalado uma vez em cada computador do caixa. 
+                    Depois da instalação, ele inicia automaticamente.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <Printer className="w-5 h-5 text-blue-600" />
+                    Instalação Rápida
+                  </h3>
+                  
+                  <div className="space-y-3">
+                    <InstallCommand 
+                      title="macOS / Linux"
+                      command="cd print-bridge && chmod +x QUICK_INSTALL.sh && ./QUICK_INSTALL.sh"
+                    />
+                    <InstallCommand 
+                      title="Windows (PowerShell)"
+                      command="cd print-bridge && .\\install-service-windows.bat"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-200 pt-4">
+                  <h4 className="font-semibold text-slate-900 mb-2">Passos Manuais:</h4>
+                  <ol className="list-decimal list-inside space-y-2 text-sm text-slate-700">
+                    <li>Abra o Terminal (macOS/Linux) ou PowerShell (Windows)</li>
+                    <li>Navegue até a pasta do projeto: <code className="bg-slate-100 px-2 py-1 rounded">cd print-bridge</code></li>
+                    <li>Execute o script de instalação (veja comandos acima)</li>
+                    <li>Aguarde a instalação concluir</li>
+                    <li>Feche este modal e tente novamente</li>
+                  </ol>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                  <p className="text-xs text-slate-600">
+                    <strong>Nota:</strong> O navegador não pode executar scripts automaticamente por segurança. 
+                    Você precisa copiar e executar os comandos no terminal manualmente.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-200 bg-slate-50 rounded-b-2xl flex gap-3 flex-shrink-0">
+              <button
+                onClick={() => setShowPrintBridgeModal(false)}
+                className="flex-1 btn-secondary py-3"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const health = await printApi.checkHealth();
+                    if (health.ok) {
+                      setPrintBridgeStatus("running");
+                      setShowPrintBridgeModal(false);
+                      toast.success("Print Bridge está rodando!");
+                    } else {
+                      toast.error("Print Bridge ainda não está rodando. Execute a instalação primeiro.");
+                    }
+                  } catch (error) {
+                    toast.error("Print Bridge ainda não está rodando. Execute a instalação primeiro.");
+                  }
+                }}
+                className="flex-1 btn-primary py-3"
+              >
+                Verificar Novamente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-8 animate-slide-up border border-slate-200 max-h-[90vh] flex flex-col">
