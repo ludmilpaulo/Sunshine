@@ -118,21 +118,7 @@ export default function POSPage() {
       return;
     }
 
-    // Check Print Bridge status before checkout
-    try {
-      const health = await printApi.checkHealth();
-      if (!health.ok) {
-        setPrintBridgeStatus("not-running");
-        setShowPrintBridgeModal(true);
-        return;
-      }
-      setPrintBridgeStatus("running");
-    } catch (error) {
-      setPrintBridgeStatus("not-running");
-      setShowPrintBridgeModal(true);
-      return;
-    }
-
+    // No need to check Print Bridge - browser printing works without it
     setShowPaymentModal(true);
     setPaymentAmount(getTotal().toFixed(2));
   };
