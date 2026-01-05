@@ -21,11 +21,12 @@
 - **Deploy**: Vercel (automatic via GitHub)
 
 ### 3. Print Bridge - Node.js (Máquina do Caixa - LOCAL)
-- **URL**: `http://localhost:3333`
+- **URL**: `http://localhost:3333` (em cada computador)
 - **Responsabilidades**:
   - Receber requisições de impressão do frontend
   - Imprimir recibos na impressora USB/LAN local
-- **Localização**: Deve rodar na mesma máquina onde o caixa usa o sistema
+- **Localização**: Deve rodar em **CADA máquina do caixa** (não compartilhado)
+- **⚠️ Importante**: Se você tem múltiplos computadores, cada um precisa ter seu próprio Print Bridge instalado
 
 ## Fluxo de uma Venda
 
