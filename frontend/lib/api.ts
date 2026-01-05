@@ -233,11 +233,12 @@ export const salesApi = {
     const response = await api.post("/sales/checkout/", { items, payments, operation_type: operationType });
     return response.data;
   },
-  list: async (dateFrom?: string, dateTo?: string, page?: number) => {
+  list: async (dateFrom?: string, dateTo?: string, page?: number, userId?: number) => {
     const params = new URLSearchParams();
     if (dateFrom) params.append("date_from", dateFrom);
     if (dateTo) params.append("date_to", dateTo);
     if (page) params.append("page", page.toString());
+    if (userId) params.append("cashier_id", userId.toString());
     const response = await api.get(`/sales/?${params.toString()}`);
     return response.data;
   },

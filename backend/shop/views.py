@@ -374,10 +374,13 @@ class SaleViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = super().get_queryset()
         date_from = self.request.query_params.get("date_from", None)
         date_to = self.request.query_params.get("date_to", None)
+        cashier_id = self.request.query_params.get("cashier_id", None)
         if date_from:
             queryset = queryset.filter(created_at__gte=date_from)
         if date_to:
             queryset = queryset.filter(created_at__lte=date_to)
+        if cashier_id:
+            queryset = queryset.filter(cashier_id=cashier_id)
         return queryset
 
 

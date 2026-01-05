@@ -2,26 +2,70 @@
 
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { salesApi } from "@/lib/api";
+import { salesApi, usersApi } from "@/lib/api";
 import toast from "react-hot-toast";
-import { format } from "date-fns";
-import { Search, Calendar, Download } from "lucide-react";
+import { format, startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth } from "date-fns";
+import { Search, Calendar, Download, User } from "lucide-react";
+
+type Period = "day" | "week" | "month" | "custom";
 
 export default function SalesPage() {
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<number | undefined>(undefined);
+  const [period, setPeriod] = useState<Period>("month");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
+    loadUsers();
+    applyPeriodFilter("month"); // Initialize with current month
+  }, []);
+
+  useEffect(() => {
     loadSales();
-  }, [dateFrom, dateTo]);
+  }, [dateFrom, dateTo, selectedUserId]);
+
+  const loadUsers = async () => {
+    try {
+      const data = await usersApi.list();
+      setUsers(data.results || data || []);
+    } catch (error) {
+      console.error("Failed to load users:", error);
+    }
+  };
+
+  const applyPeriodFilter = (selectedPeriod: Period) => {
+    setPeriod(selectedPeriod);
+    const now = new Date();
+    
+    if (selectedPeriod === "day") {
+      setDateFrom(format(startOfDay(now), "yyyy-MM-dd"));
+      setDateTo(format(endOfDay(now), "yyyy-MM-dd"));
+    } else if (selectedPeriod === "week") {
+      setDateFrom(format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd"));
+      setDateTo(format(endOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd"));
+    } else if (selectedPeriod === "month") {
+      setDateFrom(format(startOfMonth(now), "yyyy-MM-dd"));
+      setDateTo(format(endOfMonth(now), "yyyy-MM-dd"));
+    } else {
+      // Custom - don't auto-set dates
+      setDateFrom("");
+      setDateTo("");
+    }
+  };
 
   const loadSales = async () => {
     setLoading(true);
     try {
-      const data = await salesApi.list(dateFrom || undefined, dateTo || undefined);
+      const data = await salesApi.list(
+        dateFrom || undefined, 
+        dateTo || undefined, 
+        undefined,
+        selectedUserId
+      );
       setSales(data.results || data);
     } catch (error) {
       toast.error("Falha ao carregar vendas");
@@ -48,44 +92,112 @@ export default function SalesPage() {
         </div>
 
         <div className="card">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Buscar vendas..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
+          <div className="space-y-4">
+            {/* Period Quick Filters */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => applyPeriodFilter("day")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  period === "day"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                Hoje
+              </button>
+              <button
+                onClick={() => applyPeriodFilter("week")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  period === "week"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                Esta Semana
+              </button>
+              <button
+                onClick={() => applyPeriodFilter("month")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  period === "month"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                Este Mês
+              </button>
+              <button
+                onClick={() => applyPeriodFilter("custom")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  period === "custom"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                Personalizado
+              </button>
             </div>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                placeholder="Data Inicial"
-              />
+
+            {/* Filters Row */}
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <select
+                  value={selectedUserId || ""}
+                  onChange={(e) => setSelectedUserId(e.target.value ? parseInt(e.target.value) : undefined)}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+                >
+                  <option value="">Todos os Usuários</option>
+                  {users.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.full_name || user.username || `User ${user.id}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar vendas..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => {
+                    setDateFrom(e.target.value);
+                    setPeriod("custom");
+                  }}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  placeholder="Data Inicial"
+                />
+              </div>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => {
+                    setDateTo(e.target.value);
+                    setPeriod("custom");
+                  }}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  placeholder="Data Final"
+                />
+              </div>
+              <button
+                onClick={loadSales}
+                className="btn-primary flex items-center justify-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Atualizar
+              </button>
             </div>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                placeholder="Data Final"
-              />
-            </div>
-            <button
-              onClick={loadSales}
-              className="btn-primary flex items-center justify-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Atualizar
-            </button>
           </div>
         </div>
 
@@ -166,4 +278,3 @@ export default function SalesPage() {
     </DashboardLayout>
   );
 }
-
