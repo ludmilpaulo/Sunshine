@@ -418,7 +418,10 @@ export const printApi = {
       }
       body {
         margin: 0;
-        padding: 10mm 5mm;
+        padding: 8mm 4mm;
+      }
+      .no-print {
+        display: none;
       }
     }
     * {
@@ -427,93 +430,179 @@ export const printApi = {
       box-sizing: border-box;
     }
     body {
-      font-family: 'Courier New', monospace;
-      font-size: 12px;
-      line-height: 1.4;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 11px;
+      line-height: 1.5;
       width: 80mm;
       max-width: 80mm;
       margin: 0 auto;
-      padding: 10mm 5mm;
-      color: #000;
-      background: #fff;
+      padding: 8mm 4mm;
+      color: #1a1a1a;
+      background: #ffffff;
     }
     .receipt {
       width: 100%;
     }
     .header {
       text-align: center;
-      margin-bottom: 15px;
-      padding-bottom: 10px;
-      border-bottom: 1px dashed #000;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #1a1a1a;
     }
     .shop-name {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 5px;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
       text-transform: uppercase;
+      color: #1a1a1a;
     }
     .shop-info {
-      font-size: 10px;
-      margin: 2px 0;
+      font-size: 9px;
+      margin: 3px 0;
+      color: #4a4a4a;
+      line-height: 1.4;
     }
     .sale-info {
-      margin: 10px 0;
-      font-size: 11px;
+      margin: 12px 0;
+      padding: 8px 0;
+      background: #f8f8f8;
+      border-radius: 3px;
     }
     .sale-info-row {
       display: flex;
       justify-content: space-between;
-      margin: 3px 0;
+      align-items: center;
+      margin: 4px 8px;
+      font-size: 10px;
+      font-weight: 500;
+    }
+    .sale-info-label {
+      color: #666;
+      font-weight: 500;
+    }
+    .sale-info-value {
+      color: #1a1a1a;
+      font-weight: 600;
     }
     .divider {
-      border-top: 1px dashed #000;
-      margin: 10px 0;
+      border: none;
+      border-top: 1px dashed #999;
+      margin: 12px 0;
+    }
+    .section-title {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #666;
+      margin: 10px 0 8px 0;
+      letter-spacing: 0.5px;
     }
     .items {
-      margin: 10px 0;
+      margin: 8px 0;
     }
     .item {
-      margin: 8px 0;
-      font-size: 11px;
+      margin: 10px 0;
+      padding: 6px 0;
+      border-bottom: 1px dotted #ddd;
+    }
+    .item:last-child {
+      border-bottom: none;
     }
     .item-name {
-      font-weight: bold;
-      margin-bottom: 2px;
+      font-weight: 600;
+      font-size: 11px;
+      margin-bottom: 4px;
+      color: #1a1a1a;
+      line-height: 1.3;
     }
     .item-details {
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      font-size: 9px;
+      margin-top: 3px;
+      padding-left: 4px;
+    }
+    .item-qty-price {
+      color: #666;
+      font-weight: 500;
+    }
+    .item-total {
+      font-weight: 600;
+      color: #1a1a1a;
       font-size: 10px;
-      margin-left: 10px;
     }
     .totals {
-      margin: 15px 0;
-      border-top: 1px dashed #000;
+      margin: 14px 0;
       padding-top: 10px;
+      border-top: 2px solid #1a1a1a;
     }
     .total-row {
       display: flex;
       justify-content: space-between;
-      margin: 5px 0;
-      font-size: 12px;
+      align-items: center;
+      margin: 6px 0;
+      font-size: 11px;
+      padding: 2px 0;
+    }
+    .total-label {
+      font-weight: 500;
+      color: #4a4a4a;
+    }
+    .total-value {
+      font-weight: 600;
+      color: #1a1a1a;
     }
     .total-row.total {
       font-size: 14px;
-      font-weight: bold;
-      border-top: 2px solid #000;
-      padding-top: 5px;
+      font-weight: 700;
+      border-top: 2px solid #1a1a1a;
+      padding-top: 8px;
       margin-top: 8px;
+      color: #1a1a1a;
+    }
+    .total-row.total .total-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1a1a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .total-row.total .total-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1a1a1a;
     }
     .footer {
       text-align: center;
-      margin-top: 20px;
-      padding-top: 10px;
-      border-top: 1px dashed #000;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px dashed #999;
+      font-size: 9px;
+      color: #666;
+      line-height: 1.6;
+    }
+    .footer-custom {
+      margin-bottom: 10px;
+      font-weight: 500;
+      color: #4a4a4a;
+    }
+    .footer-thanks {
+      font-weight: 600;
+      color: #1a1a1a;
       font-size: 10px;
+      margin-top: 8px;
     }
     .divider-line {
-      border-top: 1px dashed #000;
-      margin: 8px 0;
+      border: none;
+      border-top: 1px dashed #999;
+      margin: 10px 0;
+    }
+    .divider-thick {
+      border: none;
+      border-top: 2px solid #1a1a1a;
+      margin: 12px 0;
     }
   </style>
 </head>
@@ -522,59 +611,56 @@ export const printApi = {
     <div class="header">
       <div class="shop-name">${receipt.shopName}</div>
       ${receipt.shopAddress ? `<div class="shop-info">${receipt.shopAddress}</div>` : ''}
-      ${receipt.shopPhone ? `<div class="shop-info">Tel: ${receipt.shopPhone}</div>` : ''}
+      ${receipt.shopPhone ? `<div class="shop-info">📞 ${receipt.shopPhone}</div>` : ''}
     </div>
     
     <div class="sale-info">
       <div class="sale-info-row">
-        <span>Venda:</span>
-        <span><strong>${receipt.saleNumber}</strong></span>
+        <span class="sale-info-label">Venda Nº:</span>
+        <span class="sale-info-value">${receipt.saleNumber}</span>
       </div>
       <div class="sale-info-row">
-        <span>Data:</span>
-        <span>${receipt.date}</span>
+        <span class="sale-info-label">Data:</span>
+        <span class="sale-info-value">${receipt.date}</span>
       </div>
     </div>
     
-    <div class="divider"></div>
+    <hr class="divider-thick">
     
+    <div class="section-title">Itens</div>
     <div class="items">
       ${receipt.items.map(item => `
         <div class="item">
           <div class="item-name">${item.name}</div>
           <div class="item-details">
-            <span>${item.qty} x ${parseFloat(item.unitPrice).toFixed(2)} Kz</span>
-            <span><strong>${parseFloat(item.total).toFixed(2)} Kz</strong></span>
+            <span class="item-qty-price">${item.qty} × ${parseFloat(item.unitPrice).toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kz</span>
+            <span class="item-total">${parseFloat(item.total).toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kz</span>
           </div>
         </div>
       `).join('')}
     </div>
     
-    <div class="divider-line"></div>
+    <hr class="divider-thick">
     
     <div class="totals">
       <div class="total-row">
-        <span>Subtotal:</span>
-        <span>${parseFloat(receipt.subtotal).toFixed(2)} Kz</span>
+        <span class="total-label">Subtotal</span>
+        <span class="total-value">${parseFloat(receipt.subtotal).toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kz</span>
       </div>
       <div class="total-row">
-        <span>Taxa:</span>
-        <span>${parseFloat(receipt.tax).toFixed(2)} Kz</span>
+        <span class="total-label">Taxa</span>
+        <span class="total-value">${parseFloat(receipt.tax).toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kz</span>
       </div>
       <div class="total-row total">
-        <span>TOTAL:</span>
-        <span>${parseFloat(receipt.total).toFixed(2)} Kz</span>
+        <span class="total-label">Total</span>
+        <span class="total-value">${parseFloat(receipt.total).toLocaleString('pt-AO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kz</span>
       </div>
     </div>
     
-    ${receipt.footer ? `
-      <div class="footer">
-        ${receipt.footer}
-      </div>
-    ` : ''}
-    
     <div class="footer">
-      Obrigado pela sua preferência!
+      ${receipt.footer ? `<div class="footer-custom">${receipt.footer}</div>` : ''}
+      <div class="footer-thanks">Obrigado pela sua preferência!</div>
+      <div style="margin-top: 6px; font-size: 8px;">Volte sempre!</div>
     </div>
   </div>
   
