@@ -221,6 +221,29 @@ export default function SalesPage() {
             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
             <p className="mt-4 text-slate-600">Carregando vendas...</p>
           </div>
+        ) : sales.length === 0 ? (
+          <div className="card text-center py-12">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="w-8 h-8 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Nenhuma venda encontrada</h3>
+            <p className="text-slate-600 mb-4">
+              {selectedUserId 
+                ? "O caixa selecionado não realizou vendas no período escolhido."
+                : "Não há vendas no período selecionado."}
+            </p>
+            {selectedUserId && (
+              <button
+                onClick={() => {
+                  setSelectedUserId(undefined);
+                  loadSales();
+                }}
+                className="text-blue-600 hover:text-blue-700 font-medium underline"
+              >
+                Limpar filtro de usuário
+              </button>
+            )}
+          </div>
         ) : (
           <div className="card overflow-hidden p-0">
             <div className="overflow-x-auto">
