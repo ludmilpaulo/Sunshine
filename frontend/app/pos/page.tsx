@@ -199,10 +199,10 @@ export default function POSPage() {
           // Print Bridge not configured or not accessible - show info message
           if (errorMessage.includes("PRINT_BRIDGE_NOT_RUNNING")) {
             toast(
-              "Venda finalizada! Para imprimir, inicie o Print Bridge nesta máquina.",
+              "Venda finalizada! Print Bridge não está rodando. Instale e inicie o serviço para imprimir automaticamente.",
               { 
                 icon: "ℹ️",
-                duration: 5000 
+                duration: 7000 
               }
             );
           } else if (errorMessage.includes("PRINT_BRIDGE_NOT_CONFIGURED")) {
