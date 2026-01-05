@@ -192,21 +192,30 @@ export default function POSPage() {
         
         // Handle different error types
         if (errorMessage.includes("PRINT_BRIDGE_NOT_CONFIGURED") || 
+            errorMessage.includes("PRINT_BRIDGE_NOT_RUNNING") ||
+            errorMessage.includes("PRINT_BRIDGE_NOT_ACCESSIBLE") ||
             errorMessage.includes("não está acessível") ||
             errorMessage.includes("CORS")) {
           // Print Bridge not configured or not accessible - show info message
-          const isLocalhostError = errorMessage.includes("localhost") || errorMessage.includes("127.0.0.1");
-          if (isLocalhostError) {
+          if (errorMessage.includes("PRINT_BRIDGE_NOT_RUNNING")) {
             toast(
-              "Venda finalizada! Impressão não disponível. Verifique se o Print Bridge está rodando na máquina local.",
+              "Venda finalizada! Para imprimir, inicie o Print Bridge nesta máquina.",
               { 
                 icon: "ℹ️",
-                duration: 6000 
+                duration: 5000 
+              }
+            );
+          } else if (errorMessage.includes("PRINT_BRIDGE_NOT_CONFIGURED")) {
+            toast(
+              "Venda finalizada! Impressão não configurada.",
+              { 
+                icon: "ℹ️",
+                duration: 5000 
               }
             );
           } else {
             toast(
-              "Venda finalizada! Impressão não disponível (Print Bridge não configurado).",
+              "Venda finalizada! Impressão não disponível no momento.",
               { 
                 icon: "ℹ️",
                 duration: 5000 

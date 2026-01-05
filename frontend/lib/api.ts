@@ -285,6 +285,27 @@ const getPrintBridgeUrl = (): string | null => {
 };
 
 export const printApi = {
+  checkHealth: async () => {
+    const printBridgeUrl = getPrintBridgeUrl();
+    if (!printBridgeUrl) {
+      return { ok: false, error: "PRINT_BRIDGE_NOT_CONFIGURED" };
+    }
+    try {
+      const response = await fetch(`${printBridgeUrl}/health`, {
+        method: "GET",
+        signal: AbortSignal.timeout(3000), // 3 second timeout
+      });
+      if (response.ok) {
+        return { ok: true };
+      }
+      return { ok: false, error: "PRINT_BRIDGE_NOT_RESPONDING" };
+    } catch (error: any) {
+      if (error.name === "AbortError" || error.message === "Failed to fetch") {
+        return { ok: false, error: "PRINT_BRIDGE_NOT_RUNNING" };
+      }
+      return { ok: false, error: "PRINT_BRIDGE_ERROR" };
+    }
+  },
   listPrinters: async () => {
     const printBridgeUrl = getPrintBridgeUrl();
     if (!printBridgeUrl) {
@@ -315,7 +336,8 @@ export const printApi = {
     
     // Get printer config from env or use provided
     const lanIp = printerConfig?.lanIp || process.env.NEXT_PUBLIC_PRINTER_LAN_IP;
-    const usbName = printerConfig?.usbPrinterName || process.env.NEXT_PUBLIC_PRINTER_USB_NAME;
+    // Default USB printer name if not provided - use from Print Bridge .env or default
+    const usbName = printerConfig?.usbPrinterName || process.env.NEXT_PUBLIC_PRINTER_USB_NAME || "_USB_Receipt_Printer";
     
     try {
       const response = await fetch(`${printBridgeUrl}/print`, {
@@ -329,11 +351,10 @@ export const printApi = {
                 port: printerConfig?.lanPort || 9100,
               }
             : undefined,
-          usb: usbName
-            ? {
-                printerName: usbName,
-              }
-            : undefined,
+          // Always send USB config to ensure fallback works
+          usb: {
+            printerName: usbName,
+          },
           receipt,
           cut: true,
           openCashDrawer: false,
@@ -354,14 +375,13 @@ export const printApi = {
         const isLocalhost = printBridgeUrl?.includes("localhost") || printBridgeUrl?.includes("127.0.0.1");
         if (isLocalhost) {
           throw new Error(
-            `Print Bridge não está acessível em ${printBridgeUrl}. ` +
-            `Verifique se o Print Bridge está rodando na máquina local. ` +
-            `Execute: cd print-bridge && node dist/index.js`
+            `PRINT_BRIDGE_NOT_RUNNING: Print Bridge não está rodando na máquina atual. ` +
+            `Execute na máquina do caixa: cd print-bridge && npm start`
           );
         } else {
           throw new Error(
-            `Print Bridge não está acessível em ${printBridgeUrl}. ` +
-            `Verifique se o serviço está rodando e acessível.`
+            `PRINT_BRIDGE_NOT_ACCESSIBLE: Print Bridge não está acessível em ${printBridgeUrl}. ` +
+            `Verifique se o serviço está rodando.`
           );
         }
       }

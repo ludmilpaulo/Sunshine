@@ -262,6 +262,26 @@ npm install
 
 ## Production Deployment
 
+### Quick Setup (Auto-Start)
+
+For production deployment with automatic startup, use the installation scripts:
+
+**macOS/Linux:**
+```bash
+cd print-bridge
+npm run build  # Build first
+./install-auto-start.sh  # Auto-detects OS and installs service
+```
+
+**Windows:**
+```powershell
+cd print-bridge
+npm run build  # Build first
+.\install-service-windows.bat  # Requires NSSM
+```
+
+### Manual Installation
+
 1. Build the service:
 ```bash
 npm run build
@@ -272,6 +292,9 @@ npm run build
 **Windows (NSSM):**
 ```bash
 nssm install PrintBridge "C:\path\to\node.exe" "C:\path\to\dist\index.js"
+nssm set PrintBridge AppDirectory "C:\path\to\print-bridge"
+nssm set PrintBridge Start SERVICE_AUTO_START
+nssm start PrintBridge
 ```
 
 **Linux (systemd):**
@@ -287,6 +310,7 @@ User=your-user
 WorkingDirectory=/path/to/print-bridge
 ExecStart=/usr/bin/node dist/index.js
 Restart=always
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
@@ -294,6 +318,7 @@ WantedBy=multi-user.target
 
 Then:
 ```bash
+sudo systemctl daemon-reload
 sudo systemctl enable print-bridge
 sudo systemctl start print-bridge
 ```
@@ -312,6 +337,8 @@ Create `~/Library/LaunchAgents/com.sunshine.printbridge.plist`:
     <string>/usr/local/bin/node</string>
     <string>/path/to/print-bridge/dist/index.js</string>
   </array>
+  <key>WorkingDirectory</key>
+  <string>/path/to/print-bridge</string>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
@@ -324,3 +351,5 @@ Then:
 ```bash
 launchctl load ~/Library/LaunchAgents/com.sunshine.printbridge.plist
 ```
+
+📖 **See `PRODUCTION_DEPLOYMENT.md` for detailed installation instructions.**
