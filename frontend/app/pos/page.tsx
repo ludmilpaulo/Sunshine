@@ -203,52 +203,38 @@ export default function POSPage() {
 
       toast.success(`Venda ${result.saleNumber} finalizada com sucesso!`);
       
-      // Try to print receipt (only if Print Bridge is running or user didn't skip printing)
+      // Try to print receipt using browser print API (fallback to Print Bridge if available)
       if (!skipPrinting) {
         try {
-          await printApi.printReceipt(result.receipt);
-          toast.success("Recibo impresso com sucesso", { duration: 3000 });
-        } catch (printError: any) {
-          console.error("Print error:", printError);
-          const errorMessage = printError?.message || "Erro desconhecido na impressão";
-          
-          // Handle different error types
-          if (errorMessage.includes("PRINT_BRIDGE_NOT_CONFIGURED") || 
-              errorMessage.includes("PRINT_BRIDGE_NOT_RUNNING") ||
-              errorMessage.includes("PRINT_BRIDGE_NOT_ACCESSIBLE") ||
-              errorMessage.includes("não está acessível") ||
-              errorMessage.includes("CORS")) {
-            // Print Bridge not configured or not accessible - show info message
-            if (errorMessage.includes("PRINT_BRIDGE_NOT_RUNNING")) {
-              toast(
-                "Venda finalizada! Print Bridge não está rodando. Instale e inicie o serviço para imprimir automaticamente.",
-                { 
-                  icon: "ℹ️",
-                  duration: 7000 
-                }
-              );
-            } else if (errorMessage.includes("PRINT_BRIDGE_NOT_CONFIGURED")) {
-              toast(
-                "Venda finalizada! Impressão não configurada.",
-                { 
-                  icon: "ℹ️",
-                  duration: 5000 
-                }
-              );
+          // First try browser printing (simpler, no installation needed)
+          await printApi.printReceiptBrowser(result.receipt);
+          toast.success("Abrindo diálogo de impressão...", { duration: 2000 });
+        } catch (browserPrintError: any) {
+          console.warn("Browser print failed, trying Print Bridge:", browserPrintError);
+          // Fallback to Print Bridge if browser print fails
+          try {
+            const health = await printApi.checkHealth();
+            if (health.ok) {
+              await printApi.printReceipt(result.receipt);
+              toast.success("Recibo impresso via Print Bridge", { duration: 3000 });
             } else {
+              // Browser print failed and Print Bridge not available
               toast(
-                "Venda finalizada! Impressão não disponível no momento.",
+                "Venda finalizada! Use o diálogo de impressão do navegador para imprimir o recibo.",
                 { 
                   icon: "ℹ️",
                   duration: 5000 
                 }
               );
             }
-          } else {
-            // Other printing errors - show warning but don't block the sale
-            toast.error(
-              `Venda finalizada! Mas a impressão falhou: ${errorMessage}`,
-              { duration: 5000 }
+          } catch (printError: any) {
+            console.error("Print error:", printError);
+            toast(
+              "Venda finalizada! Use o diálogo de impressão do navegador (Ctrl+P) para imprimir o recibo.",
+              { 
+                icon: "ℹ️",
+                duration: 5000 
+              }
             );
           }
         }

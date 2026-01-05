@@ -395,6 +395,209 @@ export const printApi = {
       throw error;
     }
   },
+  printReceiptBrowser: async (receipt: ReceiptPayload) => {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    if (!printWindow) {
+      throw new Error("Não foi possível abrir a janela de impressão. Verifique se os pop-ups estão habilitados.");
+    }
+
+    // Generate HTML for receipt
+    const receiptHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Recibo ${receipt.saleNumber}</title>
+  <style>
+    @media print {
+      @page {
+        size: 80mm auto;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        margin: 0;
+        padding: 10mm 5mm;
+      }
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      width: 80mm;
+      max-width: 80mm;
+      margin: 0 auto;
+      padding: 10mm 5mm;
+      color: #000;
+      background: #fff;
+    }
+    .receipt {
+      width: 100%;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed #000;
+    }
+    .shop-name {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+    }
+    .shop-info {
+      font-size: 10px;
+      margin: 2px 0;
+    }
+    .sale-info {
+      margin: 10px 0;
+      font-size: 11px;
+    }
+    .sale-info-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 3px 0;
+    }
+    .divider {
+      border-top: 1px dashed #000;
+      margin: 10px 0;
+    }
+    .items {
+      margin: 10px 0;
+    }
+    .item {
+      margin: 8px 0;
+      font-size: 11px;
+    }
+    .item-name {
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+    .item-details {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      margin-left: 10px;
+    }
+    .totals {
+      margin: 15px 0;
+      border-top: 1px dashed #000;
+      padding-top: 10px;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+      font-size: 12px;
+    }
+    .total-row.total {
+      font-size: 14px;
+      font-weight: bold;
+      border-top: 2px solid #000;
+      padding-top: 5px;
+      margin-top: 8px;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 20px;
+      padding-top: 10px;
+      border-top: 1px dashed #000;
+      font-size: 10px;
+    }
+    .divider-line {
+      border-top: 1px dashed #000;
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="receipt">
+    <div class="header">
+      <div class="shop-name">${receipt.shopName}</div>
+      ${receipt.shopAddress ? `<div class="shop-info">${receipt.shopAddress}</div>` : ''}
+      ${receipt.shopPhone ? `<div class="shop-info">Tel: ${receipt.shopPhone}</div>` : ''}
+    </div>
+    
+    <div class="sale-info">
+      <div class="sale-info-row">
+        <span>Venda:</span>
+        <span><strong>${receipt.saleNumber}</strong></span>
+      </div>
+      <div class="sale-info-row">
+        <span>Data:</span>
+        <span>${receipt.date}</span>
+      </div>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <div class="items">
+      ${receipt.items.map(item => `
+        <div class="item">
+          <div class="item-name">${item.name}</div>
+          <div class="item-details">
+            <span>${item.qty} x ${parseFloat(item.unitPrice).toFixed(2)} Kz</span>
+            <span><strong>${parseFloat(item.total).toFixed(2)} Kz</strong></span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div class="divider-line"></div>
+    
+    <div class="totals">
+      <div class="total-row">
+        <span>Subtotal:</span>
+        <span>${parseFloat(receipt.subtotal).toFixed(2)} Kz</span>
+      </div>
+      <div class="total-row">
+        <span>Taxa:</span>
+        <span>${parseFloat(receipt.tax).toFixed(2)} Kz</span>
+      </div>
+      <div class="total-row total">
+        <span>TOTAL:</span>
+        <span>${parseFloat(receipt.total).toFixed(2)} Kz</span>
+      </div>
+    </div>
+    
+    ${receipt.footer ? `
+      <div class="footer">
+        ${receipt.footer}
+      </div>
+    ` : ''}
+    
+    <div class="footer">
+      Obrigado pela sua preferência!
+    </div>
+  </div>
+  
+  <script>
+    window.onload = function() {
+      window.print();
+      // Close window after printing (with delay to allow print dialog to open)
+      setTimeout(function() {
+        window.close();
+      }, 250);
+    };
+  </script>
+</body>
+</html>
+    `;
+
+    // Write HTML to print window
+    printWindow.document.write(receiptHTML);
+    printWindow.document.close();
+
+    // Return success (printing happens asynchronously via window.print())
+    return { success: true };
+  },
 };
 
 // Users
