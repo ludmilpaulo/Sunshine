@@ -15,6 +15,7 @@ export default function POSPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPrintBridgeModal, setShowPrintBridgeModal] = useState(false);
   const [printBridgeStatus, setPrintBridgeStatus] = useState<"checking" | "running" | "not-running" | "unknown">("checking");
+  const [skipPrinting, setSkipPrinting] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "TRANSFER">("CASH");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [userOperationType, setUserOperationType] = useState<"SHOP" | "SALON" | "STUDIO" | "BOTH">("SHOP");
@@ -200,59 +201,72 @@ export default function POSPage() {
 
       const result = await salesApi.checkout(checkoutItems, payments, selectedOperationType);
 
-      // Try to print receipt (non-blocking)
-      try {
-        await printApi.printReceipt(result.receipt);
-        toast.success("Recibo impresso com sucesso", { duration: 3000 });
-      } catch (printError: any) {
-        console.error("Print error:", printError);
-        const errorMessage = printError?.message || "Erro desconhecido na impressão";
-        
-        // Handle different error types
-        if (errorMessage.includes("PRINT_BRIDGE_NOT_CONFIGURED") || 
-            errorMessage.includes("PRINT_BRIDGE_NOT_RUNNING") ||
-            errorMessage.includes("PRINT_BRIDGE_NOT_ACCESSIBLE") ||
-            errorMessage.includes("não está acessível") ||
-            errorMessage.includes("CORS")) {
-          // Print Bridge not configured or not accessible - show info message
-          if (errorMessage.includes("PRINT_BRIDGE_NOT_RUNNING")) {
-            toast(
-              "Venda finalizada! Print Bridge não está rodando. Instale e inicie o serviço para imprimir automaticamente.",
-              { 
-                icon: "ℹ️",
-                duration: 7000 
-              }
-            );
-          } else if (errorMessage.includes("PRINT_BRIDGE_NOT_CONFIGURED")) {
-            toast(
-              "Venda finalizada! Impressão não configurada.",
-              { 
-                icon: "ℹ️",
-                duration: 5000 
-              }
-            );
+      toast.success(`Venda ${result.saleNumber} finalizada com sucesso!`);
+      
+      // Try to print receipt (only if Print Bridge is running or user didn't skip printing)
+      if (!skipPrinting) {
+        try {
+          await printApi.printReceipt(result.receipt);
+          toast.success("Recibo impresso com sucesso", { duration: 3000 });
+        } catch (printError: any) {
+          console.error("Print error:", printError);
+          const errorMessage = printError?.message || "Erro desconhecido na impressão";
+          
+          // Handle different error types
+          if (errorMessage.includes("PRINT_BRIDGE_NOT_CONFIGURED") || 
+              errorMessage.includes("PRINT_BRIDGE_NOT_RUNNING") ||
+              errorMessage.includes("PRINT_BRIDGE_NOT_ACCESSIBLE") ||
+              errorMessage.includes("não está acessível") ||
+              errorMessage.includes("CORS")) {
+            // Print Bridge not configured or not accessible - show info message
+            if (errorMessage.includes("PRINT_BRIDGE_NOT_RUNNING")) {
+              toast(
+                "Venda finalizada! Print Bridge não está rodando. Instale e inicie o serviço para imprimir automaticamente.",
+                { 
+                  icon: "ℹ️",
+                  duration: 7000 
+                }
+              );
+            } else if (errorMessage.includes("PRINT_BRIDGE_NOT_CONFIGURED")) {
+              toast(
+                "Venda finalizada! Impressão não configurada.",
+                { 
+                  icon: "ℹ️",
+                  duration: 5000 
+                }
+              );
+            } else {
+              toast(
+                "Venda finalizada! Impressão não disponível no momento.",
+                { 
+                  icon: "ℹ️",
+                  duration: 5000 
+                }
+              );
+            }
           } else {
-            toast(
-              "Venda finalizada! Impressão não disponível no momento.",
-              { 
-                icon: "ℹ️",
-                duration: 5000 
-              }
+            // Other printing errors - show warning but don't block the sale
+            toast.error(
+              `Venda finalizada! Mas a impressão falhou: ${errorMessage}`,
+              { duration: 5000 }
             );
           }
-        } else {
-          // Other printing errors - show warning but don't block the sale
-          toast.error(
-            `Venda finalizada! Mas a impressão falhou: ${errorMessage}`,
-            { duration: 5000 }
-          );
         }
+      } else {
+        // User chose to skip printing
+        toast(
+          "Venda finalizada! (Impressão não realizada)",
+          { 
+            icon: "ℹ️",
+            duration: 4000 
+          }
+        );
       }
-
-      toast.success(`Venda ${result.saleNumber} finalizada com sucesso!`);
+      
       clear();
       setShowPaymentModal(false);
       setPaymentAmount("");
+      setSkipPrinting(false); // Reset skip flag
     } catch (error: any) {
       const detail = error.response?.data?.detail || "Falha ao finalizar venda";
       if (detail.includes("OUT_OF_STOCK")) {
@@ -569,10 +583,16 @@ export default function POSPage() {
 
             <div className="p-6 border-t border-slate-200 bg-slate-50 rounded-b-2xl flex gap-3 flex-shrink-0">
               <button
-                onClick={() => setShowPrintBridgeModal(false)}
+                onClick={() => {
+                  setShowPrintBridgeModal(false);
+                  setSkipPrinting(true);
+                  // Allow checkout without printing
+                  setShowPaymentModal(true);
+                  setPaymentAmount(getTotal().toFixed(2));
+                }}
                 className="flex-1 btn-secondary py-3"
               >
-                Fechar
+                Continuar sem Imprimir
               </button>
               <button
                 onClick={async () => {
@@ -581,7 +601,11 @@ export default function POSPage() {
                     if (health.ok) {
                       setPrintBridgeStatus("running");
                       setShowPrintBridgeModal(false);
+                      setSkipPrinting(false);
                       toast.success("Print Bridge está rodando!");
+                      // Continue with checkout
+                      setShowPaymentModal(true);
+                      setPaymentAmount(getTotal().toFixed(2));
                     } else {
                       toast.error("Print Bridge ainda não está rodando. Execute a instalação primeiro.");
                     }
