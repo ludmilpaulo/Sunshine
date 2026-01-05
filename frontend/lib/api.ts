@@ -418,7 +418,7 @@ export const printApi = {
       }
       body {
         margin: 0;
-        padding: 8mm 4mm;
+        padding: 2mm 4mm 2mm 4mm;
       }
       .no-print {
         display: none;
@@ -432,11 +432,11 @@ export const printApi = {
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       font-size: 11px;
-      line-height: 1.5;
+      line-height: 1.4;
       width: 80mm;
       max-width: 80mm;
       margin: 0 auto;
-      padding: 8mm 4mm;
+      padding: 2mm 4mm;
       color: #1a1a1a;
       background: #ffffff;
     }
@@ -445,27 +445,27 @@ export const printApi = {
     }
     .header {
       text-align: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
       border-bottom: 2px solid #1a1a1a;
     }
     .shop-name {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 700;
       letter-spacing: 0.5px;
-      margin-bottom: 6px;
+      margin-bottom: 3px;
       text-transform: uppercase;
       color: #1a1a1a;
     }
     .shop-info {
       font-size: 9px;
-      margin: 3px 0;
+      margin: 2px 0;
       color: #4a4a4a;
-      line-height: 1.4;
+      line-height: 1.3;
     }
     .sale-info {
-      margin: 12px 0;
-      padding: 8px 0;
+      margin: 6px 0;
+      padding: 5px 0;
       background: #f8f8f8;
       border-radius: 3px;
     }
@@ -473,7 +473,7 @@ export const printApi = {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin: 4px 8px;
+      margin: 3px 8px;
       font-size: 10px;
       font-weight: 500;
     }
@@ -488,22 +488,22 @@ export const printApi = {
     .divider {
       border: none;
       border-top: 1px dashed #999;
-      margin: 12px 0;
+      margin: 6px 0;
     }
     .section-title {
       font-size: 9px;
       font-weight: 600;
       text-transform: uppercase;
       color: #666;
-      margin: 10px 0 8px 0;
+      margin: 5px 0 4px 0;
       letter-spacing: 0.5px;
     }
     .items {
-      margin: 8px 0;
+      margin: 4px 0;
     }
     .item {
-      margin: 10px 0;
-      padding: 6px 0;
+      margin: 6px 0;
+      padding: 4px 0;
       border-bottom: 1px dotted #ddd;
     }
     .item:last-child {
@@ -512,7 +512,7 @@ export const printApi = {
     .item-name {
       font-weight: 600;
       font-size: 11px;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
       color: #1a1a1a;
       line-height: 1.3;
     }
@@ -521,7 +521,7 @@ export const printApi = {
       justify-content: space-between;
       align-items: center;
       font-size: 9px;
-      margin-top: 3px;
+      margin-top: 2px;
       padding-left: 4px;
     }
     .item-qty-price {
@@ -534,17 +534,17 @@ export const printApi = {
       font-size: 10px;
     }
     .totals {
-      margin: 14px 0;
-      padding-top: 10px;
+      margin: 8px 0;
+      padding-top: 6px;
       border-top: 2px solid #1a1a1a;
     }
     .total-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin: 6px 0;
+      margin: 4px 0;
       font-size: 11px;
-      padding: 2px 0;
+      padding: 1px 0;
     }
     .total-label {
       font-weight: 500;
@@ -558,8 +558,8 @@ export const printApi = {
       font-size: 14px;
       font-weight: 700;
       border-top: 2px solid #1a1a1a;
-      padding-top: 8px;
-      margin-top: 8px;
+      padding-top: 4px;
+      margin-top: 4px;
       color: #1a1a1a;
     }
     .total-row.total .total-label {
@@ -576,15 +576,15 @@ export const printApi = {
     }
     .footer {
       text-align: center;
-      margin-top: 16px;
-      padding-top: 12px;
+      margin-top: 8px;
+      padding-top: 6px;
       border-top: 1px dashed #999;
       font-size: 9px;
       color: #666;
-      line-height: 1.6;
+      line-height: 1.5;
     }
     .footer-custom {
-      margin-bottom: 10px;
+      margin-bottom: 5px;
       font-weight: 500;
       color: #4a4a4a;
     }
@@ -592,17 +592,17 @@ export const printApi = {
       font-weight: 600;
       color: #1a1a1a;
       font-size: 10px;
-      margin-top: 8px;
+      margin-top: 4px;
     }
     .divider-line {
       border: none;
       border-top: 1px dashed #999;
-      margin: 10px 0;
+      margin: 6px 0;
     }
     .divider-thick {
       border: none;
       border-top: 2px solid #1a1a1a;
-      margin: 12px 0;
+      margin: 6px 0;
     }
   </style>
 </head>
