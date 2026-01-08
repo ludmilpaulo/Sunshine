@@ -29,9 +29,9 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   const STRIP_SUFFIX = options?.stripSuffix ?? true;
   const DUPLICATE_THRESHOLD = 2000; // Ignore same code if scanned within 2 seconds
   const KEY_DUPLICATE_THRESHOLD = 50; // Ignore duplicate key events within 50ms
-  const ENTER_PROCESSING_DELAY = 200; // Wait 200ms after Enter before processing to catch last digits
-  const MAX_ENTER_WAIT_TIME = 500; // Maximum time to wait for additional digits after Enter (increased to catch all digits)
-  const BUFFER_STABLE_TIME = 100; // Time buffer must be stable before processing (increased to ensure all digits captured)
+  const ENTER_PROCESSING_DELAY = 300; // Wait 300ms after Enter before processing to catch last digits (increased for slow scanners)
+  const MAX_ENTER_WAIT_TIME = 800; // Maximum time to wait for additional digits after Enter (increased to catch all digits, especially for long codes)
+  const BUFFER_STABLE_TIME = 150; // Time buffer must be stable before processing (increased to ensure all digits captured)
 
   // Common scanner prefixes/suffixes to strip
   const PREFIXES = ["STX", "\x02", "GS", "\x1D"];
@@ -127,6 +127,13 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
     
     // Remove any non-printable characters first
     normalized = normalized.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+    
+    // Don't normalize if code is within valid barcode length range (8-14 digits)
+    // Only normalize if code is clearly too long (duplicated) or contains invalid characters
+    if (normalized.length <= 14 && /^\d+$/.test(normalized)) {
+      // Valid barcode length, return as-is
+      return normalized;
+    }
     
     // If code is too long, try to extract valid barcode
     if (normalized.length > 20) {
@@ -328,9 +335,10 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
         console.log("[Barcode] Enter pressed - Buffer:", buffer, "Length:", bufferLengthAtEnter, "Stable:", isBufferStable, "Time since change:", timeSinceBufferChange);
       }
       
-      // If buffer is stable and has minimum length, process immediately
-      // Otherwise, wait a bit to catch any trailing digits
-      const delay = isBufferStable && bufferLengthAtEnter >= MIN_LENGTH ? 50 : ENTER_PROCESSING_DELAY;
+      // Always wait a reasonable delay to catch trailing digits, especially for long codes
+      // Use longer delay for codes that might not be complete yet
+      const minDelay = bufferLengthAtEnter >= 10 ? ENTER_PROCESSING_DELAY + 100 : ENTER_PROCESSING_DELAY; // Extra delay for longer codes
+      const delay = isBufferStable && bufferLengthAtEnter >= MIN_LENGTH ? minDelay : ENTER_PROCESSING_DELAY + 100;
       
       pendingEnterProcessing = setTimeout(() => {
         const finalBufferLength = buffer.length;
@@ -341,10 +349,23 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
           if (DEBUG) {
             console.log("[Barcode] ⚠️ Buffer changed after Enter (", bufferLengthAtEnter, "->", finalBufferLength, "), waiting more...");
           }
-          // Wait additional time for more digits
+          // Wait additional time for more digits - use longer delay
           pendingEnterProcessing = setTimeout(() => {
-            processEnterKey(e);
-            pendingEnterProcessing = null;
+            // Check one more time before processing
+            const checkLength = buffer.length;
+            if (checkLength > finalBufferLength) {
+              if (DEBUG) {
+                console.log("[Barcode] Buffer still growing (", finalBufferLength, "->", checkLength, "), waiting once more...");
+              }
+              // Wait one more time
+              pendingEnterProcessing = setTimeout(() => {
+                processEnterKey(e);
+                pendingEnterProcessing = null;
+              }, ENTER_PROCESSING_DELAY);
+            } else {
+              processEnterKey(e);
+              pendingEnterProcessing = null;
+            }
           }, ENTER_PROCESSING_DELAY);
           return;
         }
@@ -386,10 +407,10 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
             }
             
             // Reset and wait again for more digits - extend the wait time
-            enterKeyTime = now;
+            enterKeyTime = now; // Update enter key time to restart the wait window
             const currentBufferLength = buffer.length;
             
-            // Use longer delay to ensure we catch all digits
+            // Use longer delay to ensure we catch all digits, especially for slow scanners
             pendingEnterProcessing = setTimeout(() => {
               const finalLength = buffer.length;
               if (finalLength > currentBufferLength) {
@@ -405,9 +426,22 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
                     if (DEBUG) {
                       console.log("[Barcode] Still receiving digits (", finalLength, "->", checkLength, "), waiting one more time...");
                     }
+                    // Wait once more to ensure all digits are captured
                     pendingEnterProcessing = setTimeout(() => {
-                      processEnterKey(e);
-                      pendingEnterProcessing = null;
+                      const lastCheckLength = buffer.length;
+                      if (lastCheckLength > checkLength) {
+                        if (DEBUG) {
+                          console.log("[Barcode] Buffer still growing (", checkLength, "->", lastCheckLength, "), final wait...");
+                        }
+                        // One more check
+                        pendingEnterProcessing = setTimeout(() => {
+                          processEnterKey(e);
+                          pendingEnterProcessing = null;
+                        }, ENTER_PROCESSING_DELAY);
+                      } else {
+                        processEnterKey(e);
+                        pendingEnterProcessing = null;
+                      }
                     }, ENTER_PROCESSING_DELAY);
                   } else {
                     processEnterKey(e);
@@ -419,6 +453,12 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
                 pendingEnterProcessing = null;
               }
             }, ENTER_PROCESSING_DELAY);
+          } else {
+            // Enter was pressed but no pending processing - this shouldn't happen, but handle it
+            if (DEBUG) {
+              console.log("[Barcode] ⚠️ Digit arrived after Enter but no pending processing - resetting enterKeyTime");
+            }
+            enterKeyTime = now;
           }
         } else if (enterKeyTime > 0) {
           // Too much time passed, reset
