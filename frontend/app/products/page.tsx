@@ -108,7 +108,7 @@ export default function ProductsPage() {
         setScanningStatus({ active: false, lastScanned: trimmedBarcode });
       }
     }, {
-      debug: true, // Always enable debug for products page to help diagnose issues
+      debug: isDev, // Enable debug in development
       minLength: 3,
       timeout: 150, // Optimized timeout for fast scanners (same as POS page)
       stripPrefix: true,
