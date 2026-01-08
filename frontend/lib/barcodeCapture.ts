@@ -21,6 +21,7 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   let enterKeyTime = 0; // Track when Enter was pressed
   let pendingEnterProcessing: NodeJS.Timeout | null = null; // Delay processing Enter to catch last digit
   let bufferStableTime = 0; // Track when buffer last changed
+  let lastBufferLength = 0; // Track last buffer length to detect if still growing
   const TIMEOUT_MS = options?.timeout || 150; // Reduced to 150ms - scanners are typically very fast
   const MIN_LENGTH = options?.minLength || 3;
   const MAX_LENGTH = 50; // Maximum reasonable barcode length
@@ -341,38 +342,58 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
       const minDelay = bufferLengthAtEnter >= 10 ? ENTER_PROCESSING_DELAY + 150 : ENTER_PROCESSING_DELAY; // Extra delay for longer codes (13-digit codes need more time)
       const delay = isBufferStable && bufferLengthAtEnter >= MIN_LENGTH ? minDelay : ENTER_PROCESSING_DELAY + 150;
       
-      pendingEnterProcessing = setTimeout(() => {
-        const finalBufferLength = buffer.length;
-        const finalBuffer = buffer;
+      // Helper function to check if buffer is still growing
+      const checkAndProcess = (attempt: number = 0, maxAttempts: number = 5) => {
+        const currentLength = buffer.length;
+        const currentBuffer = buffer;
         
-        // If buffer grew after Enter was pressed, wait a bit more
-        if (finalBufferLength > bufferLengthAtEnter || finalBuffer !== bufferAtEnter) {
-          if (DEBUG) {
-            console.log("[Barcode] ⚠️ Buffer changed after Enter (", bufferLengthAtEnter, "->", finalBufferLength, "), waiting more...");
-          }
-          // Wait additional time for more digits - use longer delay
-          pendingEnterProcessing = setTimeout(() => {
-            // Check one more time before processing
-            const checkLength = buffer.length;
-            if (checkLength > finalBufferLength) {
-              if (DEBUG) {
-                console.log("[Barcode] Buffer still growing (", finalBufferLength, "->", checkLength, "), waiting once more...");
-              }
-              // Wait one more time
-              pendingEnterProcessing = setTimeout(() => {
-                processEnterKey(e);
-                pendingEnterProcessing = null;
-              }, ENTER_PROCESSING_DELAY);
-            } else {
-              processEnterKey(e);
-              pendingEnterProcessing = null;
-            }
-          }, ENTER_PROCESSING_DELAY);
-          return;
+        if (DEBUG) {
+          console.log(`[Barcode] Check attempt ${attempt + 1}/${maxAttempts}: Buffer length=${currentLength}, was=${bufferLengthAtEnter}`);
         }
         
-        processEnterKey(e);
-        pendingEnterProcessing = null;
+        // If buffer has grown since last check, wait more
+        if (currentLength > bufferLengthAtEnter || currentBuffer !== bufferAtEnter) {
+          if (attempt < maxAttempts) {
+            if (DEBUG) {
+              console.log(`[Barcode] ⚠️ Buffer still growing (${bufferLengthAtEnter}->${currentLength}), waiting more (attempt ${attempt + 1})...`);
+            }
+            lastBufferLength = currentLength;
+            // Wait and check again
+            pendingEnterProcessing = setTimeout(() => {
+              checkAndProcess(attempt + 1, maxAttempts);
+            }, ENTER_PROCESSING_DELAY);
+          } else {
+            // Max attempts reached, process what we have
+            if (DEBUG) {
+              console.log(`[Barcode] Max attempts reached, processing buffer with length ${currentLength}`);
+            }
+            processEnterKey(e);
+            pendingEnterProcessing = null;
+          }
+        } else if (attempt > 0 && currentLength === lastBufferLength) {
+          // Buffer hasn't grown since last check, it's stable - process it
+          if (DEBUG) {
+            console.log(`[Barcode] Buffer stable at length ${currentLength}, processing...`);
+          }
+          processEnterKey(e);
+          pendingEnterProcessing = null;
+        } else {
+          // First check and buffer hasn't changed, but wait a bit more for safety
+          if (attempt === 0) {
+            lastBufferLength = currentLength;
+            pendingEnterProcessing = setTimeout(() => {
+              checkAndProcess(attempt + 1, maxAttempts);
+            }, ENTER_PROCESSING_DELAY);
+          } else {
+            // Buffer is stable
+            processEnterKey(e);
+            pendingEnterProcessing = null;
+          }
+        }
+      };
+      
+      pendingEnterProcessing = setTimeout(() => {
+        checkAndProcess();
       }, delay);
       
       return;
@@ -466,13 +487,27 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
           enterKeyTime = 0;
         }
         
+        // Verify buffer state before adding
+        const bufferBefore = buffer;
         buffer += e.key;
+        
+        // Verify the character was actually added
+        if (buffer.length !== bufferBefore.length + 1 || buffer[buffer.length - 1] !== e.key) {
+          if (DEBUG) {
+            console.error("[Barcode] ⚠️ Failed to add character to buffer! Key:", e.key, "Buffer before:", bufferBefore, "Buffer after:", buffer);
+          }
+          // Try to recover - add it manually if it wasn't added
+          if (buffer[buffer.length - 1] !== e.key) {
+            buffer = bufferBefore + e.key;
+          }
+        }
+        
         lastKeyProcessed = e.key;
         lastKeyTime = now;
         bufferStableTime = now; // Update stable time when buffer changes
         
         if (DEBUG) {
-          console.log("[Barcode] Added char:", e.key, "Buffer:", buffer, "Time since last:", timeSinceLastKey);
+          console.log("[Barcode] Added char:", e.key, "Buffer:", bufferBefore, "->", buffer, "Length:", buffer.length, "Time since last:", timeSinceLastKey);
         }
       } else if (DEBUG) {
         console.log("[Barcode] Ignored special char:", e.key, "Code:", e.key.charCodeAt(0));
@@ -484,21 +519,30 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
 
   // Also listen to keypress for better compatibility
   // NOTE: We now handle characters in keydown, so keypress is mainly for timing detection
-  // We should NOT add to buffer here to avoid duplication
+  // We should NOT add to buffer here to avoid duplication UNLESS keydown didn't catch it
   const onKeyPress = (e: KeyboardEvent) => {
     // Some scanners may trigger keypress instead of keydown
     // But we've already handled the character in keydown, so we just update timing here
     if (e.key.length === 1 && (/^[\w\-_\.\s]+$/.test(e.key) || /^[0-9]+$/.test(e.key))) {
       const now = Date.now();
       const timeSinceLastKey = now - lastTime;
-      
-      // Prevent duplicate processing - if we just processed this key in keydown, skip
       const timeSinceLastKeyEvent = now - lastKeyTime;
+      
+      // Check if this key was already processed in keydown
+      // If last key was processed very recently (within 50ms) and it's the same key, skip
       if (e.key === lastKeyProcessed && timeSinceLastKeyEvent < KEY_DUPLICATE_THRESHOLD) {
         if (DEBUG) {
-          console.log("[Barcode] ⏭️ KeyPress: Skipping duplicate key event:", e.key);
+          console.log("[Barcode] ⏭️ KeyPress: Skipping duplicate key event:", e.key, "Time:", timeSinceLastKeyEvent);
         }
         return; // Skip - already processed in keydown
+      }
+      
+      // Check if buffer already contains this key at the end (another duplicate check)
+      if (buffer.length > 0 && buffer[buffer.length - 1] === e.key && timeSinceLastKeyEvent < KEY_DUPLICATE_THRESHOLD * 2) {
+        if (DEBUG) {
+          console.log("[Barcode] ⏭️ KeyPress: Buffer already ends with this key, skipping:", e.key);
+        }
+        return;
       }
       
       if (timeSinceLastKey > TIMEOUT_MS) {
@@ -510,12 +554,15 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
       
       lastTime = now;
       // Only add to buffer if NOT already added by keydown (fallback for scanners that only send keypress)
+      // This is a safety net in case keydown didn't catch it
       if (timeSinceLastKeyEvent >= KEY_DUPLICATE_THRESHOLD || e.key !== lastKeyProcessed) {
+        const bufferBefore = buffer;
         buffer += e.key;
         lastKeyProcessed = e.key;
         lastKeyTime = now;
+        bufferStableTime = now; // Update stable time
         if (DEBUG) {
-          console.log("[Barcode] KeyPress - Added char (fallback):", e.key, "Buffer:", buffer, "Time:", timeSinceLastKey);
+          console.log("[Barcode] KeyPress - Added char (fallback):", e.key, "Buffer:", bufferBefore, "->", buffer, "Time:", timeSinceLastKey);
         }
       }
     }
