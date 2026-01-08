@@ -73,9 +73,9 @@ if DB_ENGINE == "mysql":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.mysql",
-            "NAME": config("DB_NAME", default="sunshinebar$default"),
+            "NAME": config("DB_NAME", default="sunshinebar"),
             "USER": config("DB_USER", default="sunshinebar"),
-            "PASSWORD": config("DB_PASSWORD", default=""),
+            "PASSWORD": config("DB_PASSWORD", default="Maitland@2025"),
             "HOST": config("DB_HOST", default="sunshinebar.mysql.pythonanywhere-services.com"),
             "PORT": config("DB_PORT", default="3306"),
             "OPTIONS": {
