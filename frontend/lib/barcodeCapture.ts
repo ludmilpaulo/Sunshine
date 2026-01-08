@@ -29,9 +29,9 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   const STRIP_SUFFIX = options?.stripSuffix ?? true;
   const DUPLICATE_THRESHOLD = 2000; // Ignore same code if scanned within 2 seconds
   const KEY_DUPLICATE_THRESHOLD = 50; // Ignore duplicate key events within 50ms
-  const ENTER_PROCESSING_DELAY = 300; // Wait 300ms after Enter before processing to catch last digits (increased for slow scanners)
-  const MAX_ENTER_WAIT_TIME = 800; // Maximum time to wait for additional digits after Enter (increased to catch all digits, especially for long codes)
-  const BUFFER_STABLE_TIME = 150; // Time buffer must be stable before processing (increased to ensure all digits captured)
+  const ENTER_PROCESSING_DELAY = 350; // Wait 350ms after Enter before processing to catch last digits (increased for slow scanners and long codes)
+  const MAX_ENTER_WAIT_TIME = 1000; // Maximum time to wait for additional digits after Enter (increased to catch all digits, especially for 13-14 digit codes)
+  const BUFFER_STABLE_TIME = 200; // Time buffer must be stable before processing (increased to ensure all digits captured, especially middle digits)
 
   // Common scanner prefixes/suffixes to strip
   const PREFIXES = ["STX", "\x02", "GS", "\x1D"];
@@ -337,8 +337,9 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
       
       // Always wait a reasonable delay to catch trailing digits, especially for long codes
       // Use longer delay for codes that might not be complete yet
-      const minDelay = bufferLengthAtEnter >= 10 ? ENTER_PROCESSING_DELAY + 100 : ENTER_PROCESSING_DELAY; // Extra delay for longer codes
-      const delay = isBufferStable && bufferLengthAtEnter >= MIN_LENGTH ? minDelay : ENTER_PROCESSING_DELAY + 100;
+      // For codes with 10+ digits, wait longer as they often have trailing digits arriving late
+      const minDelay = bufferLengthAtEnter >= 10 ? ENTER_PROCESSING_DELAY + 150 : ENTER_PROCESSING_DELAY; // Extra delay for longer codes (13-digit codes need more time)
+      const delay = isBufferStable && bufferLengthAtEnter >= MIN_LENGTH ? minDelay : ENTER_PROCESSING_DELAY + 150;
       
       pendingEnterProcessing = setTimeout(() => {
         const finalBufferLength = buffer.length;
