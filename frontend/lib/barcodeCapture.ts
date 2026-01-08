@@ -216,10 +216,13 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
   // Separate function to process Enter key after delay
   const processEnterKey = (e: KeyboardEvent) => {
     const processTime = Date.now();
-    const code = cleanBarcode(buffer);
+    
+    // Get the final buffer state - make sure we have the latest
+    const finalBuffer = buffer;
+    const code = cleanBarcode(finalBuffer);
     
     if (DEBUG) {
-      console.log("[Barcode] Processing Enter - Buffer:", buffer, "Cleaned:", code, "Length:", code.length);
+      console.log("[Barcode] Processing Enter - Final Buffer:", finalBuffer, "Length:", finalBuffer.length, "Cleaned:", code, "Length:", code.length);
     }
     
     // Validate code length
@@ -234,7 +237,21 @@ export function attachBarcodeCapture(handler: BarcodeHandler, options?: {
     }
     
     // Normalize the code first to handle duplicates
-    const normalizedCode = normalizeBarcode(code);
+    // BUT: if code is already a valid length (8-14 digits) and all numeric, don't normalize to prevent digit loss
+    let normalizedCode: string;
+    if (code.length >= 8 && code.length <= 14 && /^\d+$/.test(code)) {
+      // Valid barcode format - use as-is without normalization
+      normalizedCode = code;
+      if (DEBUG) {
+        console.log("[Barcode] ✅ Valid barcode format detected, using as-is without normalization:", normalizedCode, "Length:", normalizedCode.length);
+      }
+    } else {
+      // Normalize only if needed (too long or contains non-digits)
+      normalizedCode = normalizeBarcode(code);
+      if (DEBUG) {
+        console.log("[Barcode] Normalized code:", code, "->", normalizedCode);
+      }
+    }
     
     if (normalizedCode.length > MAX_LENGTH) {
       // Code is still too long after normalization - might be corrupted
