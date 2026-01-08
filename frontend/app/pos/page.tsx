@@ -6,7 +6,7 @@ import { useCartStore } from "@/lib/store";
 import { productsApi, salesApi, printApi, authApi } from "@/lib/api";
 import { attachBarcodeCapture } from "@/lib/barcodeCapture";
 import toast from "react-hot-toast";
-import { ShoppingCart, Plus, Minus, Trash2, CreditCard, DollarSign, Receipt, Printer, Copy, Check, AlertTriangle } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, CreditCard, DollarSign, Receipt, Printer, Copy, Check, AlertTriangle, Search, Keyboard } from "lucide-react";
 
 export default function POSPage() {
   const { items, addItem, removeItem, updateQty, clear, getSubtotal, getTax, getTotal } = useCartStore();
@@ -20,6 +20,74 @@ export default function POSPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [userOperationType, setUserOperationType] = useState<"SHOP" | "SALON" | "STUDIO" | "BOTH">("SHOP");
   const [selectedOperationType, setSelectedOperationType] = useState<"SHOP" | "SALON" | "STUDIO">("SHOP");
+  const [manualBarcode, setManualBarcode] = useState("");
+
+  // Function to process barcode (used by both scanner and manual input)
+  const processBarcode = async (barcode: string) => {
+    // Validate barcode before processing
+    if (!barcode || barcode.trim().length < 3) {
+      console.warn("📷 Invalid barcode received:", barcode);
+      return;
+    }
+    
+    const trimmedBarcode = barcode.trim();
+    console.log("📷 Processing barcode:", trimmedBarcode, "Length:", trimmedBarcode.length);
+    
+    setLoading(true);
+    try {
+      console.log("🔍 Searching for product with barcode:", trimmedBarcode);
+      const product = await productsApi.getByBarcode(trimmedBarcode);
+      console.log("✅ Product found:", product);
+      
+      if (!product) {
+        toast.error(`Produto não encontrado com código: ${trimmedBarcode}`, {
+          duration: 5000,
+          icon: "⚠️",
+        });
+        return;
+      }
+      
+      if (product.active) {
+        addItem(product);
+        toast.success(`Adicionado ${product.name}`, {
+          duration: 2000,
+          icon: "✅",
+        });
+      } else {
+        toast.error("Produto está inativo", {
+          duration: 3000,
+          icon: "⚠️",
+        });
+      }
+    } catch (error: any) {
+      console.error("❌ Error fetching product:", error);
+      console.error("Error response:", error.response?.data);
+      
+      if (error.response?.status === 404) {
+        const errorData = error.response?.data;
+        const message = errorData?.message || `Produto não encontrado com código: ${trimmedBarcode}`;
+        toast.error(message, {
+          duration: 5000,
+          icon: "⚠️",
+        });
+        console.warn(`Produto não encontrado. Código: "${trimmedBarcode}". Verifique se o produto está cadastrado no sistema.`);
+      } else if (error.response?.status === 400) {
+        const errorData = error.response?.data;
+        const detail = errorData?.detail || "Código de barras inválido";
+        toast.error(detail, {
+          duration: 4000,
+          icon: "⚠️",
+        });
+      } else {
+        toast.error(`Falha ao buscar produto: ${error.message || "Erro desconhecido"}`, {
+          duration: 4000,
+          icon: "❌",
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Get user operation type
@@ -34,73 +102,16 @@ export default function POSPage() {
       }
     });
     
-    // Enable debug mode in development
-    const isDev = process.env.NODE_ENV === "development";
-    
+    // Attach barcode scanner listener (only when not typing in manual input)
     const cleanup = attachBarcodeCapture(async (barcode) => {
-      // Validate barcode before processing
-      if (!barcode || barcode.trim().length < 3) {
-        console.warn("📷 Invalid barcode received:", barcode);
+      // Check if user is typing in manual input field (ignore scanner input in that case)
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLInputElement && activeElement.id === "manual-barcode-input") {
+        // User is typing manually, ignore scanner input
         return;
       }
       
-      const trimmedBarcode = barcode.trim();
-      console.log("📷 Barcode scanned:", trimmedBarcode, "Length:", trimmedBarcode.length);
-      
-      setLoading(true);
-      try {
-        console.log("🔍 Searching for product with barcode:", trimmedBarcode);
-        const product = await productsApi.getByBarcode(trimmedBarcode);
-        console.log("✅ Product found:", product);
-        
-        if (!product) {
-          toast.error(`Produto não encontrado com código: ${trimmedBarcode}`, {
-            duration: 5000,
-            icon: "⚠️",
-          });
-          return;
-        }
-        
-        if (product.active) {
-          addItem(product);
-          toast.success(`Adicionado ${product.name}`, {
-            duration: 2000,
-            icon: "✅",
-          });
-        } else {
-          toast.error("Produto está inativo", {
-            duration: 3000,
-            icon: "⚠️",
-          });
-        }
-      } catch (error: any) {
-        console.error("❌ Error fetching product:", error);
-        console.error("Error response:", error.response?.data);
-        
-        if (error.response?.status === 404) {
-          const errorData = error.response?.data;
-          const message = errorData?.message || `Produto não encontrado com código: ${trimmedBarcode}`;
-          toast.error(message, {
-            duration: 5000,
-            icon: "⚠️",
-          });
-          console.warn(`Produto não encontrado. Código escaneado: "${trimmedBarcode}". Verifique se o produto está cadastrado no sistema.`);
-        } else if (error.response?.status === 400) {
-          const errorData = error.response?.data;
-          const detail = errorData?.detail || "Código de barras inválido";
-          toast.error(detail, {
-            duration: 4000,
-            icon: "⚠️",
-          });
-        } else {
-          toast.error(`Falha ao buscar produto: ${error.message || "Erro desconhecido"}`, {
-            duration: 4000,
-            icon: "❌",
-          });
-        }
-      } finally {
-        setLoading(false);
-      }
+      await processBarcode(barcode);
     }, {
       debug: process.env.NODE_ENV === "development", // Only debug in development
       minLength: 3,
@@ -111,6 +122,23 @@ export default function POSPage() {
 
     return cleanup;
   }, [addItem]);
+
+  const handleManualBarcodeSubmit = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+    
+    if (!manualBarcode || manualBarcode.trim().length < 3) {
+      toast.error("Digite um código de barras válido (mínimo 3 caracteres)", {
+        duration: 3000,
+        icon: "⚠️",
+      });
+      return;
+    }
+    
+    await processBarcode(manualBarcode);
+    setManualBarcode(""); // Clear input after processing
+  };
 
   const handleCheckout = async () => {
     if (items.length === 0) {
