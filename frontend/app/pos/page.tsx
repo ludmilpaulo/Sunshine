@@ -358,6 +358,50 @@ export default function POSPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 animate-slide-up">
           {/* Cart */}
           <div className="lg:col-span-2 space-y-4">
+            {/* Manual Barcode Input */}
+            <div className="card">
+              <form onSubmit={handleManualBarcodeSubmit} className="space-y-3">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Keyboard className="w-4 h-4" />
+                    <span>Digite ou Escaneie o Código de Barras</span>
+                  </div>
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                      id="manual-barcode-input"
+                      type="text"
+                      value={manualBarcode}
+                      onChange={(e) => setManualBarcode(e.target.value)}
+                      onKeyDown={(e) => {
+                        // Allow Enter to submit, but prevent scanner from interfering
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleManualBarcodeSubmit();
+                        }
+                      }}
+                      placeholder="Digite o código ou escaneie..."
+                      className="w-full pl-10 pr-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-base font-medium"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={!manualBarcode || manualBarcode.trim().length < 3 || loading}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Search className="w-5 h-5" />
+                    Buscar
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500">
+                  💡 Dica: Você pode escanear com o scanner ou digitar manualmente o código
+                </p>
+              </form>
+            </div>
+
             <div className="card group">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2 sm:gap-3">
