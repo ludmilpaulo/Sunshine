@@ -45,15 +45,29 @@ export default function ProductsPage() {
     const isDev = process.env.NODE_ENV === "development";
     
     const cleanup = attachBarcodeCapture(async (barcode) => {
-      console.log("📷 Barcode scanned:", barcode);
-      setScanningStatus({ active: true, lastScanned: barcode });
+      // Check if user is typing in any input field (ignore scanner input in that case)
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) {
+        // User is typing manually, ignore scanner input
+        return;
+      }
+      
+      // Validate barcode before processing
+      if (!barcode || barcode.trim().length < 3) {
+        console.warn("📷 Invalid barcode received:", barcode);
+        return;
+      }
+      
+      const trimmedBarcode = barcode.trim();
+      console.log("📷 Barcode scanned:", trimmedBarcode, "Length:", trimmedBarcode.length);
+      setScanningStatus({ active: true, lastScanned: trimmedBarcode });
       
       // Show scanning feedback
-      toast.loading(`Escaneando código: ${barcode}...`, { id: "scanning" });
+      toast.loading(`Escaneando código: ${trimmedBarcode}...`, { id: "scanning" });
       
       // Check if product exists first
       try {
-        const existing = await productsApi.getByBarcode(barcode);
+        const existing = await productsApi.getByBarcode(trimmedBarcode);
         // Product exists - open edit modal
         toast.dismiss("scanning");
         toast.success(`Produto encontrado: ${existing.name}`, { duration: 3000 });
@@ -69,20 +83,20 @@ export default function ProductsPage() {
           initial_stock: String(existing.inventory?.qty_on_hand || 0),
         });
         setShowAddModal(true);
-        setScanningStatus({ active: false, lastScanned: barcode });
+        setScanningStatus({ active: false, lastScanned: trimmedBarcode });
       } catch (error: any) {
         // Product doesn't exist - open create modal with barcode filled
         toast.dismiss("scanning");
         const errorMsg = error.response?.data?.detail || "Produto não encontrado";
         if (errorMsg === "NOT_FOUND") {
-          toast(`Novo produto detectado! Código: ${barcode}`, { icon: "ℹ️", duration: 3000 });
+          toast(`Novo produto detectado! Código: ${trimmedBarcode}`, { icon: "ℹ️", duration: 3000 });
         } else {
           toast.error(`Erro ao buscar produto: ${errorMsg}`, { duration: 3000 });
         }
         setEditingProduct(null);
         setFormData({
           name: "",
-          barcode: barcode,
+          barcode: trimmedBarcode,
           sku: "",
           price: "",
           cost: "",
@@ -91,12 +105,12 @@ export default function ProductsPage() {
           initial_stock: "0",
         });
         setShowAddModal(true);
-        setScanningStatus({ active: false, lastScanned: barcode });
+        setScanningStatus({ active: false, lastScanned: trimmedBarcode });
       }
     }, {
       debug: isDev,
       minLength: 3,
-      timeout: 200, // Increased timeout for more accurate detection
+      timeout: 150, // Optimized timeout for fast scanners (same as POS page)
       stripPrefix: true,
       stripSuffix: true,
     });
