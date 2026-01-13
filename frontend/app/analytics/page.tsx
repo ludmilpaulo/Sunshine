@@ -22,6 +22,7 @@ export default function AnalyticsPage() {
   const [salesByOperation, setSalesByOperation] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isStaff, setIsStaff] = useState(false);
+  const [userLoaded, setUserLoaded] = useState(false);
 
   useEffect(() => {
     authApi.getMe().then((user) => {
@@ -33,6 +34,11 @@ export default function AnalyticsPage() {
       if (opType !== "BOTH") {
         setOperationType(opType as "SHOP" | "SALON" | "STUDIO");
       }
+      setUserLoaded(true);
+    }).catch((error) => {
+      console.error("Error loading user:", error);
+      toast.error("Erro ao carregar informações do usuário");
+      setUserLoaded(true); // Still set to true to prevent infinite loading
     });
   }, []);
 
@@ -44,6 +50,11 @@ export default function AnalyticsPage() {
   };
 
   const loadData = async () => {
+    // Don't load if user is not yet loaded
+    if (!userLoaded) {
+      return;
+    }
+
     setLoading(true);
     try {
       const params: any = {
@@ -94,16 +105,24 @@ export default function AnalyticsPage() {
         setSalesByOperation(null);
       }
     } catch (error: any) {
-      toast.error("Erro ao carregar dados de analytics");
-      console.error(error);
+      console.error("Error loading analytics data:", error);
+      toast.error(error?.response?.data?.detail || error?.message || "Erro ao carregar dados de analytics");
+      // Set empty data to prevent infinite loading state
+      setSalesData(null);
+      setSalesDataWithTax(null);
+      setPaymentMethodData(null);
+      setTopSellers(null);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    // Only load data after user is loaded
+    if (userLoaded) {
     loadData();
-  }, [period, operationType, isStaff, currentUser]);
+    }
+  }, [period, operationType, userLoaded]);
 
   const handleFilter = () => {
     loadData();
@@ -207,8 +226,16 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
+        {/* Loading State */}
+        {!userLoaded || loading ? (
+          <div className="card text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600">Carregando dados...</p>
+          </div>
+        ) : null}
+
         {/* Summary Cards */}
-        {salesData && salesDataWithTax && (
+        {userLoaded && !loading && salesData && salesDataWithTax && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 animate-slide-up">
             <div className="card-gradient from-blue-500 via-blue-600 to-indigo-600 group">
               <div className="flex items-center justify-between">
@@ -270,7 +297,7 @@ export default function AnalyticsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
           {/* Sales by User - Only show for admin/manager, not for staff */}
-          {!isStaff && (
+          {userLoaded && !isStaff && (
           <div className="card group">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
@@ -286,7 +313,7 @@ export default function AnalyticsPage() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
                 <p className="mt-4 text-slate-600">Carregando dados...</p>
               </div>
-            ) : salesData && salesData.users.length > 0 ? (
+            ) : salesData && salesData.users && salesData.users.length > 0 ? (
               <div className="space-y-4">
                 {salesData.users.map((user: any, index: number) => {
                   const percentage =
@@ -335,7 +362,7 @@ export default function AnalyticsPage() {
           )}
 
           {/* Top Sellers - Only show for admin/manager */}
-          {!isStaff && (
+          {userLoaded && !isStaff && (
           <div className="card">
             <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Award className="w-5 h-5" />
@@ -346,7 +373,7 @@ export default function AnalyticsPage() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
                 <p className="mt-4 text-slate-600">Carregando dados...</p>
               </div>
-            ) : topSellers && topSellers.top_sellers.length > 0 ? (
+            ) : topSellers && topSellers.top_sellers && topSellers.top_sellers.length > 0 ? (
               <div className="space-y-3">
                 {topSellers.top_sellers.map((seller: any) => {
                   const medalColors: { [key: number]: string } = {
@@ -416,6 +443,7 @@ export default function AnalyticsPage() {
         {/* Payment Methods and Sales by User with Tax */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Sales by Payment Method */}
+          {userLoaded && (
           <div className="card">
             <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <CreditCard className="w-5 h-5" />
@@ -426,7 +454,7 @@ export default function AnalyticsPage() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
                 <p className="mt-4 text-slate-600">Carregando dados...</p>
               </div>
-            ) : paymentMethodData && paymentMethodData.payment_methods.length > 0 ? (
+            ) : paymentMethodData && paymentMethodData.payment_methods && paymentMethodData.payment_methods.length > 0 ? (
               <div className="space-y-4">
                 {paymentMethodData.payment_methods.map((method: any) => {
                   const methodIcons: { [key: string]: any } = {
@@ -494,9 +522,10 @@ export default function AnalyticsPage() {
               </div>
             )}
           </div>
+          )}
 
           {/* Sales by User with Tax Breakdown - Only show for admin/manager */}
-          {!isStaff && (
+          {userLoaded && !isStaff && (
           <div className="card">
             <h2 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Users className="w-5 h-5" />
@@ -507,7 +536,7 @@ export default function AnalyticsPage() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
                 <p className="mt-4 text-slate-600">Carregando dados...</p>
               </div>
-            ) : salesDataWithTax && salesDataWithTax.users.length > 0 ? (
+            ) : salesDataWithTax && salesDataWithTax.users && salesDataWithTax.users.length > 0 ? (
               <div className="space-y-4">
                 {salesDataWithTax.users.map((user: any) => {
                   const percentage =
