@@ -20,12 +20,18 @@ export default function SalesPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    loadUsers();
-    applyPeriodFilter("month"); // Initialize with current month
+    const initialize = async () => {
+      await loadUsers();
+      applyPeriodFilter("month"); // Initialize with current month
+    };
+    initialize();
   }, []);
 
   useEffect(() => {
-    loadSales();
+    // Only load sales if dates are set (after initial period filter is applied)
+    if (dateFrom && dateTo) {
+      loadSales();
+    }
   }, [dateFrom, dateTo, selectedUserId]);
 
   const loadUsers = async () => {
