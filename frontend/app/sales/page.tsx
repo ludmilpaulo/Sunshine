@@ -60,13 +60,15 @@ export default function SalesPage() {
   const loadSales = async () => {
     setLoading(true);
     try {
+      console.log("Loading sales with filters:", { dateFrom, dateTo, selectedUserId });
       const data = await salesApi.list(
         dateFrom || undefined, 
         dateTo || undefined, 
         undefined,
         selectedUserId
       );
-      const salesList = data.results || data;
+      console.log("Sales data received:", data);
+      const salesList = data.results || data || [];
       setSales(salesList);
       
       // Alert if user selected but no sales found
@@ -82,8 +84,10 @@ export default function SalesPage() {
           }
         );
       }
-    } catch (error) {
-      toast.error("Falha ao carregar vendas");
+    } catch (error: any) {
+      console.error("Error loading sales:", error);
+      const errorMessage = error.response?.data?.detail || error.message || "Falha ao carregar vendas";
+      toast.error(`Erro ao carregar vendas: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
