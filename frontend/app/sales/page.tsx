@@ -61,6 +61,7 @@ export default function SalesPage() {
       setDateFrom("");
       setDateTo("");
     }
+    // Note: loadSales will be triggered by useEffect when dates change
   };
 
   const loadSales = async () => {
