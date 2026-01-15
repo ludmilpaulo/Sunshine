@@ -327,7 +327,8 @@ def sales_by_payment_method(request):
         try:
             naive_date = datetime.strptime(date_from, "%Y-%m-%d")
             if timezone.is_naive(naive_date):
-                start_date = timezone.make_aware(naive_date, timezone.get_current_timezone())
+                # Use the current timezone from Django settings
+                start_date = timezone.make_aware(naive_date, timezone.now().tzinfo)
             else:
                 start_date = naive_date
         except ValueError:
@@ -337,7 +338,8 @@ def sales_by_payment_method(request):
         try:
             naive_date = datetime.strptime(date_to, "%Y-%m-%d")
             if timezone.is_naive(naive_date):
-                end_date = timezone.make_aware(naive_date, timezone.get_current_timezone())
+                # Use the current timezone from Django settings
+                end_date = timezone.make_aware(naive_date, timezone.now().tzinfo)
             else:
                 end_date = naive_date
             end_date = end_date.replace(hour=23, minute=59, second=59)
@@ -440,7 +442,8 @@ def sales_by_user_with_tax(request):
         try:
             naive_date = datetime.strptime(date_from, "%Y-%m-%d")
             if timezone.is_naive(naive_date):
-                start_date = timezone.make_aware(naive_date, timezone.get_current_timezone())
+                # Use the current timezone from Django settings
+                start_date = timezone.make_aware(naive_date, timezone.now().tzinfo)
             else:
                 start_date = naive_date
         except ValueError:
@@ -450,7 +453,8 @@ def sales_by_user_with_tax(request):
         try:
             naive_date = datetime.strptime(date_to, "%Y-%m-%d")
             if timezone.is_naive(naive_date):
-                end_date = timezone.make_aware(naive_date, timezone.get_current_timezone())
+                # Use the current timezone from Django settings
+                end_date = timezone.make_aware(naive_date, timezone.now().tzinfo)
             else:
                 end_date = naive_date
             end_date = end_date.replace(hour=23, minute=59, second=59)
