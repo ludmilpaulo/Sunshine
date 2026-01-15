@@ -66,17 +66,23 @@ def sales_by_user(request):
     # Override with explicit dates if provided
     if date_from:
         try:
-            start_date = datetime.strptime(date_from, "%Y-%m-%d")
-            if timezone.is_naive(start_date):
-                start_date = timezone.make_aware(start_date)
+            naive_date = datetime.strptime(date_from, "%Y-%m-%d")
+            if timezone.is_naive(naive_date):
+                # Use the current timezone from Django settings
+                start_date = timezone.make_aware(naive_date, timezone.now().tzinfo)
+            else:
+                start_date = naive_date
         except ValueError:
             pass
 
     if date_to:
         try:
-            end_date = datetime.strptime(date_to, "%Y-%m-%d")
-            if timezone.is_naive(end_date):
-                end_date = timezone.make_aware(end_date)
+            naive_date = datetime.strptime(date_to, "%Y-%m-%d")
+            if timezone.is_naive(naive_date):
+                # Use the current timezone from Django settings
+                end_date = timezone.make_aware(naive_date, timezone.now().tzinfo)
+            else:
+                end_date = naive_date
             # Set to end of day
             end_date = end_date.replace(hour=23, minute=59, second=59)
         except ValueError:
@@ -319,17 +325,21 @@ def sales_by_payment_method(request):
     # Override with explicit dates if provided
     if date_from:
         try:
-            start_date = datetime.strptime(date_from, "%Y-%m-%d")
-            if timezone.is_naive(start_date):
-                start_date = timezone.make_aware(start_date)
+            naive_date = datetime.strptime(date_from, "%Y-%m-%d")
+            if timezone.is_naive(naive_date):
+                start_date = timezone.make_aware(naive_date, timezone.get_current_timezone())
+            else:
+                start_date = naive_date
         except ValueError:
             pass
 
     if date_to:
         try:
-            end_date = datetime.strptime(date_to, "%Y-%m-%d")
-            if timezone.is_naive(end_date):
-                end_date = timezone.make_aware(end_date)
+            naive_date = datetime.strptime(date_to, "%Y-%m-%d")
+            if timezone.is_naive(naive_date):
+                end_date = timezone.make_aware(naive_date, timezone.get_current_timezone())
+            else:
+                end_date = naive_date
             end_date = end_date.replace(hour=23, minute=59, second=59)
         except ValueError:
             pass
@@ -428,17 +438,21 @@ def sales_by_user_with_tax(request):
     # Override with explicit dates if provided
     if date_from:
         try:
-            start_date = datetime.strptime(date_from, "%Y-%m-%d")
-            if timezone.is_naive(start_date):
-                start_date = timezone.make_aware(start_date)
+            naive_date = datetime.strptime(date_from, "%Y-%m-%d")
+            if timezone.is_naive(naive_date):
+                start_date = timezone.make_aware(naive_date, timezone.get_current_timezone())
+            else:
+                start_date = naive_date
         except ValueError:
             pass
 
     if date_to:
         try:
-            end_date = datetime.strptime(date_to, "%Y-%m-%d")
-            if timezone.is_naive(end_date):
-                end_date = timezone.make_aware(end_date)
+            naive_date = datetime.strptime(date_to, "%Y-%m-%d")
+            if timezone.is_naive(naive_date):
+                end_date = timezone.make_aware(naive_date, timezone.get_current_timezone())
+            else:
+                end_date = naive_date
             end_date = end_date.replace(hour=23, minute=59, second=59)
         except ValueError:
             pass
