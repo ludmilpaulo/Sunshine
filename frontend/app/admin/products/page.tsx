@@ -24,6 +24,7 @@ export default function AdminProductsPage() {
     active: true,
   });
   const [stockAdjustment, setStockAdjustment] = useState({ productId: 0, qty: 0 });
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -113,6 +114,19 @@ export default function AdminProductsPage() {
       loadProducts();
     } catch (error: any) {
       toast.error(error.response?.data?.detail || "Failed to adjust stock");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!productToDelete) return;
+    
+    try {
+      await productsApi.delete(productToDelete.id);
+      toast.success("Product deleted successfully");
+      setProductToDelete(null);
+      loadProducts();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to delete product");
     }
   };
 
@@ -209,6 +223,14 @@ export default function AdminProductsPage() {
                           className="px-2 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
                         >
                           Stock
+                        </button>
+                        <button
+                          onClick={() => {
+                            setProductToDelete(product);
+                          }}
+                          className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                        >
+                          Delete
                         </button>
                       </div>
                     </td>
@@ -353,6 +375,37 @@ export default function AdminProductsPage() {
                   className="flex-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                 >
                   Adjust
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {productToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4 text-red-600">Delete Product</h2>
+            <div className="space-y-4">
+              <p className="text-gray-700">
+                Are you sure you want to delete <strong>{productToDelete.name}</strong>?
+              </p>
+              <p className="text-sm text-gray-500">
+                This action cannot be undone. The product will be permanently removed from the system.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setProductToDelete(null)}
+                  className="flex-1 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  Delete
                 </button>
               </div>
             </div>
