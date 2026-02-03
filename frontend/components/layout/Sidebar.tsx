@@ -18,6 +18,7 @@ import {
   X,
   Lock,
   TrendingDown,
+  PackageOpen,
 } from "lucide-react";
 import { authApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
@@ -33,6 +34,7 @@ const menuItems = {
     { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
     { href: "/products", label: "Produtos", icon: Package },
     { href: "/stock-report", label: "Relatório Stock", icon: TrendingDown },
+    { href: "/stock-movements", label: "Histórico Stock", icon: PackageOpen },
     { href: "/staff", label: "Funcionários", icon: Users },
     { href: "/sales", label: "Vendas", icon: BarChart3 },
     { href: "/analytics", label: "Analytics", icon: BarChart3 },
@@ -44,6 +46,7 @@ const menuItems = {
     { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
     { href: "/products", label: "Produtos", icon: Package },
     { href: "/stock-report", label: "Relatório Stock", icon: TrendingDown },
+    { href: "/stock-movements", label: "Histórico Stock", icon: PackageOpen },
     { href: "/sales", label: "Vendas", icon: BarChart3 },
     { href: "/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/pos", label: "PDV", icon: ShoppingCart },

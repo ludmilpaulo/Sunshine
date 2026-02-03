@@ -5,7 +5,7 @@ from django.db.models import Sum, Count, Q, Avg
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from datetime import timedelta, datetime
-from .models import Sale, SaleItem, StockMove, UserProfile
+from .models import Sale, SaleItem, StockMove, Inventory, Product, UserProfile
 
 User = get_user_model()
 
@@ -647,6 +647,162 @@ def product_sales_stock_report(request):
             "total_quantity_sold": total_qty,
             "total_revenue": float(total_revenue),
             "product_count": len(products),
+        },
+    })
+
+
+def _parse_date_range(request):
+    """Parse period and date_from/date_to into start_date, end_date."""
+    period = request.query_params.get("period", "month")
+    date_from = request.query_params.get("date_from")
+    date_to = request.query_params.get("date_to")
+
+    now = timezone.now()
+    if period == "day":
+        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_date = now
+    elif period == "week":
+        days_since_monday = now.weekday()
+        start_date = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+        end_date = now
+    elif period == "month":
+        start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_date = now
+    else:
+        start_date = None
+        end_date = None
+
+    if date_from:
+        try:
+            naive_date = datetime.strptime(date_from, "%Y-%m-%d")
+            start_date = timezone.make_aware(naive_date, timezone.now().tzinfo) if timezone.is_naive(naive_date) else naive_date
+        except ValueError:
+            pass
+
+    if date_to:
+        try:
+            naive_date = datetime.strptime(date_to, "%Y-%m-%d")
+            end_date = timezone.make_aware(naive_date, timezone.now().tzinfo) if timezone.is_naive(naive_date) else naive_date
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+        except ValueError:
+            pass
+
+    return period, start_date, end_date
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def stock_movement_report(request):
+    """
+    Stock movement and inventory report for admin and manager.
+    Shows: when stock was added, when it went out (sales), stock left per product.
+    Query params:
+    - period: 'day', 'week', 'month' (default: 'month')
+    - date_from: YYYY-MM-DD (optional)
+    - date_to: YYYY-MM-DD (optional)
+    - operation_type: SHOP, SALON, STUDIO (optional, for sale moves only)
+    """
+    if not (request.user.is_superuser or request.user.is_staff):
+        return Response(
+            {"detail": "Permission denied. Admin or Manager required."},
+            status=403
+        )
+
+    period, start_date, end_date = _parse_date_range(request)
+
+    # Get sale IDs in range for operation_type filter (for SALE moves)
+    sales_query = Sale.objects.filter(
+        status=Sale.Status.PAID,
+        created_at__gte=start_date,
+        created_at__lte=end_date,
+    )
+    sales_query = apply_operation_type_filter(sales_query, request)
+    sale_ids = set(sales_query.values_list("id", flat=True))
+
+    # All StockMoves in date range
+    moves_qs = StockMove.objects.filter(
+        created_at__gte=start_date,
+        created_at__lte=end_date,
+    ).select_related("product", "sale").order_by("-created_at")
+
+    # Filter: for SALE moves, only include if sale in sale_ids
+    moves = []
+    for m in moves_qs:
+        if m.reason == StockMove.Reason.SALE and m.sale_id:
+            if m.sale_id in sale_ids:
+                moves.append(m)
+        else:
+            moves.append(m)
+
+    # Build product aggregates and movement log
+    product_added = {}
+    product_sold = {}
+    movement_log = []
+
+    for m in moves:
+        pid = m.product_id
+        product_added[pid] = product_added.get(pid, 0) + (m.qty_change if m.qty_change > 0 else 0)
+        product_sold[pid] = product_sold.get(pid, 0) + (abs(m.qty_change) if m.qty_change < 0 else 0)
+
+        reason_display = {"SALE": "Venda", "RESTOCK": "Reposição", "ADJUSTMENT": "Ajuste"}.get(m.reason, m.reason)
+        movement_log.append({
+            "id": m.id,
+            "created_at": m.created_at.isoformat(),
+            "product_id": pid,
+            "product_name": m.product.name,
+            "barcode": m.product.barcode or "",
+            "reason": m.reason,
+            "reason_display": reason_display,
+            "qty_change": m.qty_change,
+            "sale_number": m.sale.number if m.sale else None,
+        })
+
+    # Current stock from Inventory
+    product_ids = set(product_added.keys()) | set(product_sold.keys())
+    inventory_map = {
+        inv["product_id"]: inv["qty_on_hand"]
+        for inv in Inventory.objects.filter(product_id__in=product_ids).values("product_id", "qty_on_hand")
+    }
+
+    # Per-product summary
+    all_pids = set(product_added.keys()) | set(product_sold.keys())
+    products = []
+    for pid in all_pids:
+        try:
+            p = Product.objects.get(id=pid)
+        except Product.DoesNotExist:
+            continue
+        added = product_added.get(pid, 0)
+        sold = product_sold.get(pid, 0)
+        net = added - sold
+        current = inventory_map.get(pid, 0)
+        products.append({
+            "product_id": pid,
+            "product_name": p.name,
+            "barcode": p.barcode or "",
+            "qty_added": added,
+            "qty_sold": sold,
+            "net_change": net,
+            "current_stock": current,
+        })
+
+    products.sort(key=lambda x: -x["qty_sold"])
+
+    total_added = sum(product_added.values())
+    total_sold = sum(product_sold.values())
+
+    return Response({
+        "period": period,
+        "date_from": start_date.strftime("%Y-%m-%d") if start_date else None,
+        "date_to": end_date.strftime("%Y-%m-%d") if end_date else None,
+        "movements": movement_log,
+        "products": products,
+        "summary": {
+            "total_added": total_added,
+            "total_sold": total_sold,
+            "net_change": total_added - total_sold,
+            "product_count": len(products),
+            "movement_count": len(movement_log),
         },
     })
 

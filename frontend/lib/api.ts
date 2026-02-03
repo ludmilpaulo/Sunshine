@@ -810,6 +810,39 @@ export interface ProductSalesStockReportResponse {
   };
 }
 
+export interface StockMovementReportResponse {
+  period: string;
+  date_from: string | null;
+  date_to: string | null;
+  movements: Array<{
+    id: number;
+    created_at: string;
+    product_id: number;
+    product_name: string;
+    barcode: string;
+    reason: string;
+    reason_display: string;
+    qty_change: number;
+    sale_number: string | null;
+  }>;
+  products: Array<{
+    product_id: number;
+    product_name: string;
+    barcode: string;
+    qty_added: number;
+    qty_sold: number;
+    net_change: number;
+    current_stock: number;
+  }>;
+  summary: {
+    total_added: number;
+    total_sold: number;
+    net_change: number;
+    product_count: number;
+    movement_count: number;
+  };
+}
+
 export interface SalesByPaymentMethodResponse {
   period: string;
   date_from: string | null;
@@ -910,6 +943,20 @@ export const analyticsApi = {
     if (params?.date_to) queryParams.append("date_to", params.date_to);
     if (params?.operation_type) queryParams.append("operation_type", params.operation_type);
     const response = await api.get(`/analytics/product-sales-stock-report/?${queryParams.toString()}`);
+    return response.data;
+  },
+  getStockMovementReport: async (params?: {
+    period?: "day" | "week" | "month";
+    date_from?: string;
+    date_to?: string;
+    operation_type?: "SHOP" | "SALON" | "STUDIO";
+  }): Promise<StockMovementReportResponse> => {
+    const queryParams = new URLSearchParams();
+    if (params?.period) queryParams.append("period", params.period || "month");
+    if (params?.date_from) queryParams.append("date_from", params.date_from);
+    if (params?.date_to) queryParams.append("date_to", params.date_to);
+    if (params?.operation_type) queryParams.append("operation_type", params.operation_type);
+    const response = await api.get(`/analytics/stock-movement-report/?${queryParams.toString()}`);
     return response.data;
   },
 };
