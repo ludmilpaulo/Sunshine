@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import ProductViewSet, SaleViewSet, checkout, adjust_stock
 from .user_views import UserViewSet, user_stats
 from .dashboard_views import dashboard_stats, sales_chart_data, top_products
-from .analytics_views import sales_by_user, sales_trend_by_user, top_sellers, sales_by_payment_method, sales_by_user_with_tax
+from .analytics_views import sales_by_user, sales_trend_by_user, top_sellers, sales_by_payment_method, sales_by_user_with_tax, product_sales_stock_report
 
 router = DefaultRouter()
 router.register(r"products", ProductViewSet, basename="product")
@@ -24,6 +24,7 @@ urlpatterns = [
     path("analytics/sales-trend-by-user/", sales_trend_by_user, name="sales-trend-by-user"),
     path("analytics/top-sellers/", top_sellers, name="top-sellers"),
     path("analytics/sales-by-payment-method/", sales_by_payment_method, name="sales-by-payment-method"),
+    path("analytics/product-sales-stock-report/", product_sales_stock_report, name="product-sales-stock-report"),
     # Router URLs come last
     path("", include(router.urls)),
 ]

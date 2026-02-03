@@ -791,6 +791,25 @@ export interface SalesByUserWithTaxResponse {
   };
 }
 
+export interface ProductSalesStockReportResponse {
+  period: string;
+  date_from: string | null;
+  date_to: string | null;
+  products: Array<{
+    product_id: number;
+    product_name: string;
+    barcode: string;
+    quantity_sold: number;
+    stock_out: number;
+    revenue: number;
+  }>;
+  summary: {
+    total_quantity_sold: number;
+    total_revenue: number;
+    product_count: number;
+  };
+}
+
 export interface SalesByPaymentMethodResponse {
   period: string;
   date_from: string | null;
@@ -877,6 +896,20 @@ export const analyticsApi = {
     if (params?.period) queryParams.append("period", params.period);
     if (params?.limit) queryParams.append("limit", params.limit.toString());
     const response = await api.get(`/analytics/top-sellers/?${queryParams.toString()}`);
+    return response.data;
+  },
+  getProductSalesStockReport: async (params?: {
+    period?: "day" | "week" | "month";
+    date_from?: string;
+    date_to?: string;
+    operation_type?: "SHOP" | "SALON" | "STUDIO";
+  }): Promise<ProductSalesStockReportResponse> => {
+    const queryParams = new URLSearchParams();
+    if (params?.period) queryParams.append("period", params.period || "month");
+    if (params?.date_from) queryParams.append("date_from", params.date_from);
+    if (params?.date_to) queryParams.append("date_to", params.date_to);
+    if (params?.operation_type) queryParams.append("operation_type", params.operation_type);
+    const response = await api.get(`/analytics/product-sales-stock-report/?${queryParams.toString()}`);
     return response.data;
   },
 };

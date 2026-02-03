@@ -5,7 +5,7 @@ from django.db.models import Sum, Count, Q, Avg
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from datetime import timedelta, datetime
-from .models import Sale, Payment, UserProfile
+from .models import Sale, SaleItem, StockMove, UserProfile
 
 User = get_user_model()
 
@@ -530,6 +530,123 @@ def sales_by_user_with_tax(request):
             "total_sales": overall_totals["total_sales"] or 0,
             "user_count": len(result),
             "tax_percentage": float((overall_totals["total_tax"] / overall_totals["total_subtotal"] * 100)) if overall_totals["total_subtotal"] and overall_totals["total_subtotal"] > 0 else 0,
+        },
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def product_sales_stock_report(request):
+    """
+    Product sales and stock-out report for admin and manager.
+    Returns quantity sold, stock that went out per product, with date filters.
+    Query params:
+    - period: 'day', 'week', 'month' (default: 'month')
+    - date_from: YYYY-MM-DD (optional, for custom range)
+    - date_to: YYYY-MM-DD (optional, for custom range)
+    - operation_type: SHOP, SALON, STUDIO (optional)
+    """
+    # Restrict to admin and manager only
+    if not (request.user.is_superuser or request.user.is_staff):
+        return Response(
+            {"detail": "Permission denied. Admin or Manager required."},
+            status=403
+        )
+
+    period = request.query_params.get("period", "month")
+    date_from = request.query_params.get("date_from")
+    date_to = request.query_params.get("date_to")
+
+    # Calculate date range
+    now = timezone.now()
+    if period == "day":
+        start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_date = now
+    elif period == "week":
+        days_since_monday = now.weekday()
+        start_date = (now - timedelta(days=days_since_monday)).replace(hour=0, minute=0, second=0, microsecond=0)
+        end_date = now
+    elif period == "month":
+        start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_date = now
+    else:
+        start_date = None
+        end_date = None
+
+    if date_from:
+        try:
+            naive_date = datetime.strptime(date_from, "%Y-%m-%d")
+            start_date = timezone.make_aware(naive_date, timezone.now().tzinfo) if timezone.is_naive(naive_date) else naive_date
+        except ValueError:
+            pass
+
+    if date_to:
+        try:
+            naive_date = datetime.strptime(date_to, "%Y-%m-%d")
+            end_date = timezone.make_aware(naive_date, timezone.now().tzinfo) if timezone.is_naive(naive_date) else naive_date
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+        except ValueError:
+            pass
+
+    # Get sales in date range
+    sales_query = Sale.objects.filter(
+        status=Sale.Status.PAID,
+        created_at__gte=start_date,
+        created_at__lte=end_date,
+    )
+    sales_query = apply_operation_type_filter(sales_query, request)
+    sale_ids = list(sales_query.values_list("id", flat=True))
+
+    # Aggregate by product from SaleItem
+    product_stats = (
+        SaleItem.objects.filter(sale_id__in=sale_ids)
+        .values("product_id", "product__name", "product__barcode")
+        .annotate(
+            quantity_sold=Sum("qty"),
+            revenue=Sum("line_total"),
+        )
+        .order_by("-quantity_sold")
+    )
+
+    # Stock out from StockMove (SALE reason only - stock that left via sales)
+    stock_out_rows = (
+        StockMove.objects.filter(
+            reason=StockMove.Reason.SALE,
+            sale_id__in=sale_ids,
+            qty_change__lt=0,
+        )
+        .values("product_id")
+        .annotate(stock_out=Sum("qty_change"))
+    )
+    stock_out_by_product = {r["product_id"]: r["stock_out"] for r in stock_out_rows}
+
+    products = []
+    for item in product_stats:
+        product_id = item["product_id"]
+        stock_out = stock_out_by_product.get(product_id, 0)
+        # stock_out is negative, so we use abs for display
+        products.append({
+            "product_id": product_id,
+            "product_name": item["product__name"],
+            "barcode": item["product__barcode"] or "",
+            "quantity_sold": item["quantity_sold"],
+            "stock_out": abs(int(stock_out)) if stock_out else item["quantity_sold"],
+            "revenue": float(item["revenue"]),
+        })
+
+    # Summary
+    total_qty = sum(p["quantity_sold"] for p in products)
+    total_revenue = sum(p["revenue"] for p in products)
+
+    return Response({
+        "period": period,
+        "date_from": start_date.strftime("%Y-%m-%d") if start_date else None,
+        "date_to": end_date.strftime("%Y-%m-%d") if end_date else None,
+        "products": products,
+        "summary": {
+            "total_quantity_sold": total_qty,
+            "total_revenue": float(total_revenue),
+            "product_count": len(products),
         },
     })
 

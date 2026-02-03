@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   Lock,
+  TrendingDown,
 } from "lucide-react";
 import { authApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
@@ -31,6 +32,7 @@ const menuItems = {
   admin: [
     { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
     { href: "/products", label: "Produtos", icon: Package },
+    { href: "/stock-report", label: "Relatório Stock", icon: TrendingDown },
     { href: "/staff", label: "Funcionários", icon: Users },
     { href: "/sales", label: "Vendas", icon: BarChart3 },
     { href: "/analytics", label: "Analytics", icon: BarChart3 },
@@ -41,6 +43,7 @@ const menuItems = {
   manager: [
     { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
     { href: "/products", label: "Produtos", icon: Package },
+    { href: "/stock-report", label: "Relatório Stock", icon: TrendingDown },
     { href: "/sales", label: "Vendas", icon: BarChart3 },
     { href: "/analytics", label: "Analytics", icon: BarChart3 },
     { href: "/pos", label: "PDV", icon: ShoppingCart },
