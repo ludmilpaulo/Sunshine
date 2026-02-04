@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { analyticsApi, authApi } from "@/lib/api";
 import { BarChart3, TrendingUp, Users, Award, Calendar, Filter, CreditCard, DollarSign, Receipt } from "lucide-react";
@@ -49,7 +49,7 @@ export default function AnalyticsPage() {
     }).format(amount);
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     // Don't load if user is not yet loaded
     if (!userLoaded) {
       return;
@@ -115,14 +115,14 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userLoaded, period, dateFrom, dateTo, operationType, isStaff, currentUser, userOperationType]);
 
   useEffect(() => {
     // Only load data after user is loaded
     if (userLoaded) {
-    loadData();
+      loadData();
     }
-  }, [period, operationType, userLoaded]);
+  }, [userLoaded, loadData]);
 
   const handleFilter = () => {
     loadData();
