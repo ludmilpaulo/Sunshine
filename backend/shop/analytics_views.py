@@ -368,32 +368,37 @@ def sales_by_payment_method(request):
     # Get sales IDs
     sale_ids = list(sales_query.values_list("id", flat=True))
 
-    # Group payments by method
-    payment_methods = (
-        Payment.objects.filter(sale_id__in=sale_ids)
-        .values("method")
-        .annotate(
-            total_amount=Sum("amount"),
-            count=Count("id"),
-        )
-        .order_by("-total_amount")
-    )
-
     # Calculate totals including tax
     total_revenue = sales_query.aggregate(total=Sum("total"))["total"] or 0
     total_subtotal = sales_query.aggregate(total=Sum("subtotal"))["total"] or 0
     total_tax = sales_query.aggregate(total=Sum("tax"))["total"] or 0
 
-    # Format response
+    # Group payments by method (only if there are sales)
     methods_data = []
-    for method in payment_methods:
-        methods_data.append({
-            "method": method["method"],
-            "method_display": dict(Payment.Method.choices).get(method["method"], method["method"]),
-            "total_amount": float(method["total_amount"] or 0),
-            "count": method["count"] or 0,
-            "percentage": float((method["total_amount"] / total_revenue * 100)) if total_revenue > 0 else 0,
-        })
+    if sale_ids:
+        payment_methods = (
+            Payment.objects.filter(sale_id__in=sale_ids)
+            .values("method")
+            .annotate(
+                total_amount=Sum("amount"),
+                count=Count("id"),
+            )
+            .order_by("-total_amount")
+        )
+
+        # Get Payment method choices
+        payment_choices = dict(Payment.Method.choices)
+        
+        for method in payment_methods:
+            method_total = float(method["total_amount"] or 0)
+            method_count = method["count"] or 0
+            methods_data.append({
+                "method": method["method"],
+                "method_display": payment_choices.get(method["method"], method["method"]),
+                "total_amount": method_total,
+                "count": method_count,
+                "percentage": float((method_total / total_revenue * 100)) if total_revenue > 0 else 0,
+            })
 
     return Response({
         "period": period,
