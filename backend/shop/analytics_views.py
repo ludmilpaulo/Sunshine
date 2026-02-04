@@ -5,7 +5,7 @@ from django.db.models import Sum, Count, Q, Avg
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from datetime import timedelta, datetime
-from .models import Sale, SaleItem, StockMove, Inventory, Product, UserProfile
+from .models import Sale, SaleItem, StockMove, Inventory, Product, Payment, UserProfile
 
 User = get_user_model()
 
