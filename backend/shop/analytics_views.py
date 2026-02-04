@@ -368,10 +368,14 @@ def sales_by_payment_method(request):
     # Get sales IDs
     sale_ids = list(sales_query.values_list("id", flat=True))
 
-    # Calculate totals including tax
-    total_revenue = sales_query.aggregate(total=Sum("total"))["total"] or 0
-    total_subtotal = sales_query.aggregate(total=Sum("subtotal"))["total"] or 0
-    total_tax = sales_query.aggregate(total=Sum("tax"))["total"] or 0
+    # Calculate totals including tax (convert Decimal to float)
+    total_revenue_raw = sales_query.aggregate(total=Sum("total"))["total"]
+    total_subtotal_raw = sales_query.aggregate(total=Sum("subtotal"))["subtotal"]
+    total_tax_raw = sales_query.aggregate(total=Sum("tax"))["tax"]
+    
+    total_revenue = float(total_revenue_raw) if total_revenue_raw else 0.0
+    total_subtotal = float(total_subtotal_raw) if total_subtotal_raw else 0.0
+    total_tax = float(total_tax_raw) if total_tax_raw else 0.0
 
     # Group payments by method (only if there are sales)
     methods_data = []
@@ -404,21 +408,23 @@ def sales_by_payment_method(request):
             )
             
             for method in payment_methods:
-                method_total = float(method["total_amount"] or 0)
-                method_count = method["count"] or 0
+                # Safely convert Decimal to float
+                method_amount_raw = method.get("total_amount")
+                method_total = float(method_amount_raw) if method_amount_raw else 0.0
+                method_count = method.get("count") or 0
+                
                 methods_data.append({
-                    "method": method["method"],
-                    "method_display": payment_choices.get(method["method"], method["method"]),
+                    "method": method.get("method", ""),
+                    "method_display": payment_choices.get(method.get("method", ""), method.get("method", "")),
                     "total_amount": method_total,
                     "count": method_count,
-                    "percentage": float((method_total / total_revenue * 100)) if total_revenue > 0 else 0,
+                    "percentage": float((method_total / total_revenue * 100)) if total_revenue > 0 else 0.0,
                 })
-        except NameError as e:
-            # If Payment is not defined, return empty methods_data
-            # This should not happen if imports are correct, but handle gracefully
+        except (NameError, TypeError, ValueError) as e:
+            # If Payment is not defined or type conversion fails, return empty methods_data
             import logging
             logger = logging.getLogger(__name__)
-            logger.error(f"Payment model not accessible: {e}")
+            logger.error(f"Error processing payment methods: {e}")
             methods_data = []
 
     return Response({
@@ -427,10 +433,10 @@ def sales_by_payment_method(request):
         "date_to": end_date.isoformat() if end_date else None,
         "payment_methods": methods_data,
         "summary": {
-            "total_revenue": float(total_revenue),
-            "total_subtotal": float(total_subtotal),
-            "total_tax": float(total_tax),
-            "tax_percentage": float((total_tax / total_subtotal * 100)) if total_subtotal > 0 else 0,
+            "total_revenue": total_revenue,
+            "total_subtotal": total_subtotal,
+            "total_tax": total_tax,
+            "tax_percentage": float((total_tax / total_subtotal * 100)) if total_subtotal > 0 else 0.0,
         },
     })
 
