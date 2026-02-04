@@ -20,11 +20,12 @@ def apply_operation_type_filter(sales_query, request, operation_type_param=None)
     else:
         # Auto-filter based on user profile (unless admin with BOTH access)
         try:
-            profile = request.user.profile
-            if profile.operation_type != "BOTH":
-                sales_query = sales_query.filter(operation_type=profile.operation_type)
-        except UserProfile.DoesNotExist:
-            # Default to SHOP if no profile
+            if hasattr(request.user, 'profile'):
+                profile = request.user.profile
+                if profile and profile.operation_type != "BOTH":
+                    sales_query = sales_query.filter(operation_type=profile.operation_type)
+        except (UserProfile.DoesNotExist, AttributeError):
+            # Default to SHOP if no profile or attribute error
             pass
     
     return sales_query
@@ -90,6 +91,9 @@ def sales_by_user(request):
 
     # Build query
     sales_query = Sale.objects.filter(status=Sale.Status.PAID)
+    
+    # Apply operation type filter
+    sales_query = apply_operation_type_filter(sales_query, request)
     
     if start_date:
         sales_query = sales_query.filter(created_at__gte=start_date)
