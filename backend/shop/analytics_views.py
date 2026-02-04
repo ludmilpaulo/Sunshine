@@ -124,9 +124,9 @@ def sales_by_user(request):
             "user_id": item["cashier_id"],
             "username": item["cashier__username"],
             "full_name": full_name,
-            "total_revenue": float(item["total_revenue"]),
-            "total_sales": item["total_sales"],
-            "avg_sale": float(item["avg_sale"]),
+            "total_revenue": float(item["total_revenue"] or 0),
+            "total_sales": item["total_sales"] or 0,
+            "avg_sale": float(item["avg_sale"] or 0),
         })
 
     return Response({
@@ -223,8 +223,8 @@ def sales_trend_by_user(request):
             result[key] = {}
         
         result[key][user_key] = {
-            "revenue": float(item["revenue"]),
-            "count": item["count"],
+            "revenue": float(item["revenue"] or 0),
+            "count": item["count"] or 0,
         }
 
     return Response({
@@ -286,8 +286,8 @@ def top_sellers(request):
             "user_id": seller["cashier_id"],
             "username": seller["cashier__username"],
             "full_name": full_name,
-            "total_revenue": float(seller["total_revenue"]),
-            "total_sales": seller["total_sales"],
+            "total_revenue": float(seller["total_revenue"] or 0),
+            "total_sales": seller["total_sales"] or 0,
         })
 
     return Response({
@@ -390,8 +390,8 @@ def sales_by_payment_method(request):
         methods_data.append({
             "method": method["method"],
             "method_display": dict(Payment.Method.choices).get(method["method"], method["method"]),
-            "total_amount": float(method["total_amount"]),
-            "count": method["count"],
+            "total_amount": float(method["total_amount"] or 0),
+            "count": method["count"] or 0,
             "percentage": float((method["total_amount"] / total_revenue * 100)) if total_revenue > 0 else 0,
         })
 
@@ -514,12 +514,12 @@ def sales_by_user_with_tax(request):
             "user_id": item["cashier_id"],
             "username": item["cashier__username"],
             "full_name": full_name,
-            "total_revenue": float(item["total_revenue"]),
-            "total_subtotal": float(item["total_subtotal"]),
-            "total_tax": float(item["total_tax"]),
-            "total_sales": item["total_sales"],
-            "avg_sale": float(item["avg_sale"]),
-            "tax_percentage": float((item["total_tax"] / item["total_subtotal"] * 100)) if item["total_subtotal"] > 0 else 0,
+            "total_revenue": float(item["total_revenue"] or 0),
+            "total_subtotal": float(item["total_subtotal"] or 0),
+            "total_tax": float(item["total_tax"] or 0),
+            "total_sales": item["total_sales"] or 0,
+            "avg_sale": float(item["avg_sale"] or 0),
+            "tax_percentage": float((item["total_tax"] / item["total_subtotal"] * 100)) if item["total_subtotal"] and item["total_subtotal"] > 0 else 0,
         })
 
     return Response({
