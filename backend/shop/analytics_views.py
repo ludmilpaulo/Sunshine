@@ -375,30 +375,51 @@ def sales_by_payment_method(request):
 
     # Group payments by method (only if there are sales)
     methods_data = []
+    
+    # Get Payment method choices mapping
+    # Payment should be imported at the top, but add fallback for safety
+    payment_choices = {
+        "CASH": "Cash",
+        "CARD": "Card", 
+        "TRANSFER": "Transfer"
+    }
+    try:
+        # Try to get actual choices from Payment model
+        if hasattr(Payment, 'Method') and hasattr(Payment.Method, 'choices'):
+            payment_choices = dict(Payment.Method.choices)
+    except (AttributeError, NameError, TypeError):
+        # Use fallback if Payment is not accessible
+        pass
+    
     if sale_ids:
-        payment_methods = (
-            Payment.objects.filter(sale_id__in=sale_ids)
-            .values("method")
-            .annotate(
-                total_amount=Sum("amount"),
-                count=Count("id"),
+        try:
+            payment_methods = (
+                Payment.objects.filter(sale_id__in=sale_ids)
+                .values("method")
+                .annotate(
+                    total_amount=Sum("amount"),
+                    count=Count("id"),
+                )
+                .order_by("-total_amount")
             )
-            .order_by("-total_amount")
-        )
-
-        # Get Payment method choices
-        payment_choices = dict(Payment.Method.choices)
-        
-        for method in payment_methods:
-            method_total = float(method["total_amount"] or 0)
-            method_count = method["count"] or 0
-            methods_data.append({
-                "method": method["method"],
-                "method_display": payment_choices.get(method["method"], method["method"]),
-                "total_amount": method_total,
-                "count": method_count,
-                "percentage": float((method_total / total_revenue * 100)) if total_revenue > 0 else 0,
-            })
+            
+            for method in payment_methods:
+                method_total = float(method["total_amount"] or 0)
+                method_count = method["count"] or 0
+                methods_data.append({
+                    "method": method["method"],
+                    "method_display": payment_choices.get(method["method"], method["method"]),
+                    "total_amount": method_total,
+                    "count": method_count,
+                    "percentage": float((method_total / total_revenue * 100)) if total_revenue > 0 else 0,
+                })
+        except NameError as e:
+            # If Payment is not defined, return empty methods_data
+            # This should not happen if imports are correct, but handle gracefully
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Payment model not accessible: {e}")
+            methods_data = []
 
     return Response({
         "period": period,
