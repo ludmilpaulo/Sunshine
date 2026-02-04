@@ -369,9 +369,13 @@ def sales_by_payment_method(request):
     sale_ids = list(sales_query.values_list("id", flat=True))
 
     # Calculate totals including tax (convert Decimal to float)
-    total_revenue_raw = sales_query.aggregate(total=Sum("total"))["total"]
-    total_subtotal_raw = sales_query.aggregate(total=Sum("subtotal"))["subtotal"]
-    total_tax_raw = sales_query.aggregate(total=Sum("tax"))["tax"]
+    revenue_agg = sales_query.aggregate(total=Sum("total"))
+    subtotal_agg = sales_query.aggregate(total=Sum("subtotal"))
+    tax_agg = sales_query.aggregate(total=Sum("tax"))
+    
+    total_revenue_raw = revenue_agg.get("total")
+    total_subtotal_raw = subtotal_agg.get("total")
+    total_tax_raw = tax_agg.get("total")
     
     total_revenue = float(total_revenue_raw) if total_revenue_raw else 0.0
     total_subtotal = float(total_subtotal_raw) if total_subtotal_raw else 0.0
